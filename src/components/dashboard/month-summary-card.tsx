@@ -1,7 +1,8 @@
 "use client";
 
-import { Clock, Users, BookOpen } from "lucide-react";
+import { Clock, Users, BookOpen, ArrowRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import Link from "next/link";
 import { formatDuration } from "@/lib/utils";
 
 interface MonthSummaryCardProps {
@@ -71,6 +72,15 @@ export function MonthSummaryCard({
           value={String(estudosAtivos)}
           accent
         />
+      </div>
+      <div className="mt-4 pt-4 border-t border-[var(--border)]">
+        <Link 
+          href="/historico" 
+          className="flex items-center justify-between w-full text-body-sm font-medium text-[var(--primary)] hover:text-[var(--primary-dark)] transition-colors"
+        >
+          <span>Ver extrato completo</span>
+          <ArrowRight size={16} />
+        </Link>
       </div>
     </Card>
   );

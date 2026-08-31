@@ -4,6 +4,7 @@ import { AppHeader } from "@/components/layout/app-header";
 import { MonthlyGoalCard } from "@/components/dashboard/monthly-goal-card";
 import { MonthSummaryCard } from "@/components/dashboard/month-summary-card";
 import { UpcomingVisitsCard } from "@/components/dashboard/upcoming-visits-card";
+import { ActivityBreakdownCard } from "@/components/dashboard/activity-breakdown-card";
 import { AnnualChart } from "@/components/dashboard/annual-chart";
 import { useMonthRecords, useDailyRecords, useContacts, useUpcomingVisits } from "@/lib/db/hooks";
 import type { Profile } from "@/lib/db/dexie";
@@ -45,6 +46,8 @@ export function DashboardClient({ userId, profile }: DashboardClientProps) {
       />
 
       <UpcomingVisitsCard visits={upcoming} />
+
+      <ActivityBreakdownCard records={records.filter(r => r.date.startsWith(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`))} />
 
       <AnnualChart
         records={records}
