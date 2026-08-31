@@ -1,0 +1,173 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Inter:wght@400;500;600&display=swap");
+@import "tailwindcss";
+
+/* ─────────────────────────────────────────────────────────────
+   CSS Custom Properties — Light Mode (default)
+───────────────────────────────────────────────────────────── */
+:root {
+  /* Brand */
+  --primary:        #1E3A5F;
+  --primary-dark:   #132C48;
+  --accent:         #B8934A;
+  --success:        #6B9080;
+
+  /* Surfaces */
+  --background:     #F5F6F4;
+  --surface:        #FFFFFF;
+  --border:         #E3E5E0;
+
+  /* Text */
+  --ink:            #22262B;
+  --ink-muted:      #6B7280;
+
+  /* Fonts */
+  --font-fraunces:  'Fraunces', Georgia, serif;
+  --font-inter:     'Inter', system-ui, sans-serif;
+
+  /* Misc */
+  --radius:         10px;
+  --bottom-nav-h:   64px;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Dark Mode — [data-theme="dark"] on <html>
+───────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --primary:        #3A6EA5;
+  --primary-dark:   #132C48;
+  --accent:         #C9A55A;
+  --success:        #7DA898;
+
+  --background:     #0F1B2B;
+  --surface:        #16283D;
+  --border:         #22364E;
+
+  --ink:            #EDF0F2;
+  --ink-muted:      #8FA3B8;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Base Reset & Global Styles
+───────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-inter);
+  background-color: var(--background);
+  color: var(--ink);
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Typography Utilities
+───────────────────────────────────────────────────────────── */
+.font-display    { font-family: var(--font-fraunces); }
+.font-sans       { font-family: var(--font-inter); }
+
+.text-display {
+  font-family: var(--font-fraunces);
+  font-size: 2.25rem;
+  line-height: 2.75rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.text-heading {
+  font-family: var(--font-fraunces);
+  font-size: 1.75rem;
+  line-height: 2.25rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.text-subheading {
+  font-family: var(--font-inter);
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.text-body       { font-size: 1rem;    line-height: 1.5rem;  color: var(--ink); }
+.text-body-sm    { font-size: 0.875rem;line-height: 1.25rem; color: var(--ink); }
+.text-caption    { font-size: 0.75rem; line-height: 1rem;    color: var(--ink-muted); }
+.text-label      { font-size: 0.875rem;line-height: 1rem;    font-weight: 500; color: var(--ink); }
+
+/* ─────────────────────────────────────────────────────────────
+   Focus Ring — accessible, not generic blue
+───────────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: var(--radius);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Scrollbar (Desktop)
+───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ink-muted); }
+
+/* ─────────────────────────────────────────────────────────────
+   Animation — respect prefers-reduced-motion
+───────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Print Styles — for the monthly report page
+───────────────────────────────────────────────────────────── */
+@media print {
+  body { background: #fff; color: #000; }
+  .no-print { display: none !important; }
+  .print-only { display: block !important; }
+  a { text-decoration: none; color: inherit; }
+  @page { margin: 2cm; }
+}
+
+.print-only { display: none; }
+
+/* ─────────────────────────────────────────────────────────────
+   App Shell Layout
+───────────────────────────────────────────────────────────── */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  padding-bottom: var(--bottom-nav-h);
+}
+
+.page-content {
+  flex: 1;
+  padding: 1rem;
+  max-width: 480px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Card base
+───────────────────────────────────────────────────────────── */
+.card-base {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 1px 3px 0 rgba(0,0,0,0.06);
+}

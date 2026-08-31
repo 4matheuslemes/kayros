@@ -1,0 +1,161 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { LogOut, User, FileText } from "lucide-react";
+import { toast } from "sonner";
+import { AppHeader } from "@/components/layout/app-header";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input, Field } from "@/components/ui/input";
+import { createClient } from "@/lib/supabase/client";
+import { APP_NAME } from "@/lib/constants";
+import type { Profile } from "@/lib/db/dexie";
+import Link from "next/link";
+
+const schema = z.object({
+  full_name:              z.string().min(1, "Nome obrigatório"),
+  congregation_name:      z.string().optional(),
+  monthly_goal_hours:     z.coerce.number().int().min(1).max(300),
+});
+
+type FormData = z.infer<typeof schema>;
+
+interface PerfilClientProps {
+  userId: string;
+  email: string;
+  profile: Profile;
+}
+
+export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
+  const router = useRouter();
+  const [saving, setSaving] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      full_name:          profile.full_name,
+      congregation_name:  profile.congregation_name ?? "",
+      monthly_goal_hours: profile.monthly_goal_hours,
+    },
+  });
+
+  const onSubmit = async (data: FormData) => {
+    setSaving(true);
+    const supabase = createClient();
+    const { error } = await supabase.from("profiles").upsert({
+      id:                  userId,
+      full_name:           data.full_name,
+      congregation_name:   data.congregation_name ?? null,
+      monthly_goal_hours:  data.monthly_goal_hours,
+      service_year_start_month: profile.service_year_start_month,
+    });
+    if (error) {
+      toast.error("Erro ao salvar. Tente novamente.");
+    } else {
+      toast.success("Perfil atualizado");
+    }
+    setSaving(false);
+  };
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  };
+
+  return (
+    <div className="flex flex-col gap-5">
+      <AppHeader title="Perfil" subtitle={email} />
+
+      {/* Profile form */}
+      <Card>
+        <div className="flex items-center gap-2 mb-5">
+          <User size={16} className="text-[var(--primary)]" />
+          <h2 className="text-subheading text-[var(--ink)]">Dados pessoais</h2>
+        </div>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+          <Field label="Nome completo" htmlFor="profile-name" error={errors.full_name?.message} required>
+            <Input
+              id="profile-name"
+              placeholder="João da Silva"
+              error={!!errors.full_name}
+              {...register("full_name")}
+            />
+          </Field>
+
+          <Field label="Congregação" htmlFor="profile-congregation" hint="Opcional">
+            <Input
+              id="profile-congregation"
+              placeholder="Congregação Central"
+              {...register("congregation_name")}
+            />
+          </Field>
+
+          <Field
+            label="Meta mensal de horas"
+            htmlFor="profile-goal"
+            error={errors.monthly_goal_hours?.message}
+            hint="Padrão: 50 horas"
+          >
+            <Input
+              id="profile-goal"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={300}
+              error={!!errors.monthly_goal_hours}
+              {...register("monthly_goal_hours")}
+            />
+          </Field>
+
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            loading={saving}
+            className="w-full mt-1"
+          >
+            Salvar alterações
+          </Button>
+        </form>
+      </Card>
+
+      {/* Quick links */}
+      <Card padding="none" className="overflow-hidden divide-y divide-[var(--border)]">
+        <Link
+          href="/relatorio"
+          className="flex items-center gap-3 px-5 py-4 hover:bg-[var(--background)] transition-colors text-body-sm text-[var(--ink)]"
+        >
+          <FileText size={16} className="text-[var(--ink-muted)]" />
+          Relatório do mês
+        </Link>
+      </Card>
+
+      {/* App info */}
+      <p className="text-center text-caption text-[var(--ink-muted)]">
+        {APP_NAME} — uso pessoal
+      </p>
+
+      {/* Logout */}
+      <Button
+        variant="ghost"
+        size="lg"
+        onClick={handleLogout}
+        loading={loggingOut}
+        className="w-full text-red-500 hover:text-red-600 hover:bg-red-50"
+        id="btn-logout"
+      >
+        <LogOut size={18} />
+        Sair da conta
+      </Button>
+    </div>
+  );
+}

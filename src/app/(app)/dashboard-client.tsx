@@ -1,0 +1,55 @@
+"use client";
+
+import { AppHeader } from "@/components/layout/app-header";
+import { MonthlyGoalCard } from "@/components/dashboard/monthly-goal-card";
+import { MonthSummaryCard } from "@/components/dashboard/month-summary-card";
+import { UpcomingVisitsCard } from "@/components/dashboard/upcoming-visits-card";
+import { AnnualChart } from "@/components/dashboard/annual-chart";
+import { useMonthRecords, useDailyRecords, useContacts, useUpcomingVisits } from "@/lib/db/hooks";
+import type { Profile } from "@/lib/db/dexie";
+
+interface DashboardClientProps {
+  userId: string;
+  profile: Profile;
+}
+
+export function DashboardClient({ userId, profile }: DashboardClientProps) {
+  const { totalMinutes } = useMonthRecords(userId);
+  const { records }      = useDailyRecords(userId);
+  const { contacts }     = useContacts(userId);
+  const upcoming         = useUpcomingVisits(userId, 3);
+
+  const revisitas     = contacts.filter((c) => c.status === "revisita").length;
+  const estudosAtivos = contacts.filter((c) => c.status === "estudo_ativo").length;
+
+  const firstName = profile.full_name.split(" ")[0];
+  const hour      = new Date().getHours();
+  const greeting  = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
+
+  return (
+    <div className="flex flex-col gap-4">
+      <AppHeader
+        title={`${greeting}, ${firstName}`}
+        subtitle={profile.congregation_name ?? undefined}
+      />
+
+      <MonthlyGoalCard
+        completedMinutes={totalMinutes}
+        goalHours={profile.monthly_goal_hours}
+      />
+
+      <MonthSummaryCard
+        totalMinutes={totalMinutes}
+        revisitas={revisitas}
+        estudosAtivos={estudosAtivos}
+      />
+
+      <UpcomingVisitsCard visits={upcoming} />
+
+      <AnnualChart
+        records={records}
+        goalHours={profile.monthly_goal_hours}
+      />
+    </div>
+  );
+}
