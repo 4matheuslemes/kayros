@@ -7,6 +7,7 @@ import { UpcomingVisitsCard } from "@/components/dashboard/upcoming-visits-card"
 import { ActivityBreakdownCard } from "@/components/dashboard/activity-breakdown-card";
 import { AnnualChart } from "@/components/dashboard/annual-chart";
 import { HoursRegistrationCard } from "@/components/dashboard/hours-registration-card";
+import { LetterMeetingShortcut } from "@/components/dashboard/letter-meeting-shortcut";
 import { useMonthRecords, useDailyRecords, useContacts, useUpcomingVisits } from "@/lib/db/hooks";
 import type { Profile } from "@/lib/db/dexie";
 
@@ -48,6 +49,8 @@ export function DashboardClient({ userId, profile }: DashboardClientProps) {
         goalHours={profile.monthly_goal_hours}
         workingDays={profile.working_days ?? [1, 2, 3, 4, 5, 6, 7]}
       />
+
+      <LetterMeetingShortcut />
 
       <MonthSummaryCard
         totalMinutes={totalMinutes}

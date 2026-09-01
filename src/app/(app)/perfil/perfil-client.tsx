@@ -45,6 +45,7 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   const { register, handleSubmit, watch, setValue, reset, formState: { errors, isDirty } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -80,6 +81,7 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
       });
       // Reset form to clear isDirty state with new values
       reset(data);
+      setIsEditing(false);
     }
     setSaving(false);
   };
@@ -109,8 +111,8 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
               id="profile-name"
               placeholder="João da Silva"
               error={!!errors.full_name}
+              disabled={!isEditing}
               {...register("full_name")}
-              className={!isDirty ? "opacity-75" : ""}
             />
           </Field>
 
@@ -118,8 +120,8 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
             <Input
               id="profile-congregation"
               placeholder="Congregação Central"
+              disabled={!isEditing}
               {...register("congregation_name")}
-              className={!isDirty ? "opacity-75" : ""}
             />
           </Field>
 
@@ -136,17 +138,16 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
               min={1}
               max={300}
               error={!!errors.monthly_goal_hours}
+              disabled={!isEditing}
               {...register("monthly_goal_hours")}
-              className={!isDirty ? "opacity-75" : ""}
             />
           </Field>
 
           {/* Schedule */}
-          <div className="pt-2 border-t border-[var(--border)]">
-            <div className="flex items-center gap-2 mb-3 mt-1">
-              <CalendarDays size={14} className="text-[var(--primary)]" />
-              <h3 className="text-label text-[var(--ink)]">Programação</h3>
-            </div>
+          <div className="pt-4 mt-2 border-t border-[var(--border)] flex flex-col gap-1.5">
+            <label className="text-label text-[var(--ink)]">
+              Programação
+            </label>
             
             <div className="flex justify-between items-center gap-1">
               {DAYS_OF_WEEK.map((day) => {
@@ -156,6 +157,7 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
                   <button
                     key={day.id}
                     type="button"
+                    disabled={!isEditing}
                     onClick={() => {
                       if (isSelected) {
                         if (currentDays.length > 1) {
@@ -170,8 +172,8 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
                     className={`w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-full text-[11px] font-sans font-semibold transition-all ${
                       isSelected
                         ? "bg-[var(--primary)] text-white shadow-sm"
-                        : "bg-[var(--surface)] border border-[var(--border)] text-[var(--ink-muted)] hover:bg-[var(--background)] opacity-75"
-                    } ${!isDirty && isSelected ? "opacity-80" : ""}`}
+                        : "bg-[var(--surface)] border border-[var(--border)] text-[var(--ink-muted)] hover:bg-[var(--background)]"
+                    } ${!isEditing && isSelected ? "opacity-80" : ""} disabled:opacity-60 disabled:cursor-not-allowed`}
                   >
                     {day.label}
                   </button>
@@ -184,15 +186,27 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
             </p>
           </div>
 
-          <Button
-            type={isDirty ? "submit" : "button"}
-            variant={isDirty ? "primary" : "secondary"}
-            size="lg"
-            loading={saving}
-            className="w-full mt-2"
-          >
-            {isDirty ? "Salvar alterações" : "Editar"}
-          </Button>
+          {!isEditing ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="lg"
+              className="w-full mt-2"
+              onClick={() => setIsEditing(true)}
+            >
+              Editar
+            </Button>
+          ) : (
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              loading={saving}
+              className="w-full mt-2"
+            >
+              Salvar alterações
+            </Button>
+          )}
         </form>
       </Card>
 

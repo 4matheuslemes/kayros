@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
 import { Home, ScrollText, Users, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { lightTap } from "@/lib/haptics";
 
 const NAV_ITEMS = [
   { href: "/",           icon: Home,       label: "Início"    },
@@ -14,6 +16,12 @@ const NAV_ITEMS = [
 
 export function BottomNav() {
   const pathname = usePathname();
+  const [optimisticPath, setOptimisticPath] = useState(pathname);
+
+  // Sync with actual pathname when it changes
+  useEffect(() => {
+    setOptimisticPath(pathname);
+  }, [pathname]);
 
   return (
     <nav
@@ -34,16 +42,20 @@ export function BottomNav() {
       {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
         const active =
           href === "/"
-            ? pathname === "/"
-            : pathname.startsWith(href);
+            ? optimisticPath === "/"
+            : optimisticPath.startsWith(href);
 
         return (
           <Link
             key={href}
             href={href}
+            onPointerDown={() => {
+              lightTap();
+              setOptimisticPath(href);
+            }}
             className={cn(
               "flex-1 flex flex-col items-center justify-center gap-1",
-              "min-h-[44px] transition-colors duration-150",
+              "min-h-[44px] transition-all duration-100 active:scale-90",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)]",
               active
                 ? "text-[var(--primary)]"

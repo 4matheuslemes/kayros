@@ -34,9 +34,27 @@ export function useDailyRecords(userId: string | undefined) {
         .order("date", { ascending: false });
 
       if (data) {
-        await db.daily_records.bulkPut(
-          data.map((r) => ({ ...r, synced: true }))
-        );
+        const pendingQueue = await db.sync_queue.where("table_name").equals("daily_records").toArray();
+        const pendingIds = new Set(pendingQueue.map(q => q.record_id));
+        
+        const localRecords = await db.daily_records.where("user_id").equals(userId).toArray();
+        const remoteIds = new Set(data.map(d => d.id));
+        
+        const toDeleteIds = localRecords
+          .filter(l => !remoteIds.has(l.id) && !pendingIds.has(l.id))
+          .map(l => l.id);
+          
+        const safeData = data.filter(d => !pendingIds.has(d.id));
+
+        await db.transaction("rw", db.daily_records, async () => {
+          if (toDeleteIds.length > 0) {
+            await db.daily_records.bulkDelete(toDeleteIds);
+          }
+          if (safeData.length > 0) {
+            await db.daily_records.bulkPut(safeData.map(r => ({ ...r, synced: true })));
+          }
+        });
+
         setRecords(
           (await db.daily_records
             .where("user_id")
@@ -113,7 +131,27 @@ export function useContacts(userId: string | undefined) {
         .order("name");
 
       if (data) {
-        await db.contacts.bulkPut(data.map((c) => ({ ...c, synced: true })));
+        const pendingQueue = await db.sync_queue.where("table_name").equals("contacts").toArray();
+        const pendingIds = new Set(pendingQueue.map(q => q.record_id));
+        
+        const localRecords = await db.contacts.where("user_id").equals(userId).toArray();
+        const remoteIds = new Set(data.map(d => d.id));
+        
+        const toDeleteIds = localRecords
+          .filter(l => !remoteIds.has(l.id) && !pendingIds.has(l.id))
+          .map(l => l.id);
+          
+        const safeData = data.filter(d => !pendingIds.has(d.id));
+
+        await db.transaction("rw", db.contacts, async () => {
+          if (toDeleteIds.length > 0) {
+            await db.contacts.bulkDelete(toDeleteIds);
+          }
+          if (safeData.length > 0) {
+            await db.contacts.bulkPut(safeData.map(c => ({ ...c, synced: true })));
+          }
+        });
+
         setContacts(await db.contacts.where("user_id").equals(userId).sortBy("name"));
       }
     } catch {
@@ -137,6 +175,7 @@ export function useContact(contactId: string) {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
+    if (!contactId) return;
     const db = getDb();
 
     const local = await db.contacts.get(contactId);
@@ -155,9 +194,13 @@ export function useContact(contactId: string) {
         .select("*")
         .eq("id", contactId)
         .single();
+        
       if (c) {
-        await db.contacts.put({ ...c, synced: true });
-        setContact({ ...c, synced: true });
+        const pendingC = await db.sync_queue.where("record_id").equals(contactId).count();
+        if (pendingC === 0) {
+          await db.contacts.put({ ...c, synced: true });
+          setContact({ ...c, synced: true });
+        }
       }
 
       const { data: v } = await supabase
@@ -165,8 +208,29 @@ export function useContact(contactId: string) {
         .select("*")
         .eq("contact_id", contactId)
         .order("visit_date", { ascending: false });
+        
       if (v) {
-        await db.visit_history.bulkPut(v.map((x) => ({ ...x, synced: true })));
+        const pendingQueue = await db.sync_queue.where("table_name").equals("visit_history").toArray();
+        const pendingIds = new Set(pendingQueue.map(q => q.record_id));
+        
+        const localRecords = await db.visit_history.where("contact_id").equals(contactId).toArray();
+        const remoteIds = new Set(v.map(d => d.id));
+        
+        const toDeleteIds = localRecords
+          .filter(l => !remoteIds.has(l.id) && !pendingIds.has(l.id))
+          .map(l => l.id);
+          
+        const safeData = v.filter(d => !pendingIds.has(d.id));
+
+        await db.transaction("rw", db.visit_history, async () => {
+          if (toDeleteIds.length > 0) {
+            await db.visit_history.bulkDelete(toDeleteIds);
+          }
+          if (safeData.length > 0) {
+            await db.visit_history.bulkPut(safeData.map(x => ({ ...x, synced: true })));
+          }
+        });
+
         setVisits(
           (await db.visit_history
             .where("contact_id")
@@ -197,7 +261,6 @@ export function useUpcomingVisits(userId: string | undefined, limit = 3) {
   useEffect(() => {
     if (!userId) return;
     const db = getDb();
-    const today = format(new Date(), "yyyy-MM-dd");
 
     (async () => {
       // Get contacts for this user first

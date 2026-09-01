@@ -54,6 +54,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         "text-[var(--ink)] placeholder:text-[var(--ink-muted)]",
         "transition-colors duration-150",
         "focus:outline-none focus:border-[var(--primary)] focus:ring-1 focus:ring-[var(--primary)]",
+        "disabled:opacity-60 disabled:cursor-not-allowed",
         error && "border-red-500 focus:border-red-500 focus:ring-red-500",
         className
       )}
