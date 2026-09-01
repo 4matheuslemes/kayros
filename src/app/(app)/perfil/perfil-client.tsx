@@ -30,6 +30,7 @@ const schema = z.object({
   full_name:              z.string().min(1, "Nome obrigatório"),
   congregation_name:      z.string().optional(),
   monthly_goal_hours:     z.coerce.number().int().min(1).max(300),
+  working_days:           z.array(z.number()).min(1, "Selecione ao menos um dia"),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -44,14 +45,14 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-  const [workingDays, setWorkingDays] = useState<number[]>(profile.working_days ?? [1, 2, 3, 4, 5, 6, 7]);
 
-  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, watch, setValue, reset, formState: { errors, isDirty } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
       full_name:          profile.full_name,
       congregation_name:  profile.congregation_name ?? "",
       monthly_goal_hours: profile.monthly_goal_hours,
+      working_days:       profile.working_days ?? [1, 2, 3, 4, 5, 6, 7],
     },
   });
 
@@ -64,7 +65,7 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
       congregation_name:   data.congregation_name ?? null,
       monthly_goal_hours:  data.monthly_goal_hours,
       service_year_start_month: profile.service_year_start_month,
-      working_days:        workingDays,
+      working_days:        data.working_days,
     });
     if (error) {
       toast.error("Erro ao salvar. Tente novamente.");
@@ -75,38 +76,12 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
         full_name: data.full_name,
         congregation_name: data.congregation_name ?? undefined,
         monthly_goal_hours: data.monthly_goal_hours,
+        working_days: data.working_days,
       });
+      // Reset form to clear isDirty state with new values
+      reset(data);
     }
     setSaving(false);
-  };
-
-  const toggleDay = async (dayId: number) => {
-    const isSelected = workingDays.includes(dayId);
-    let newDays: number[];
-    if (isSelected) {
-      if (workingDays.length === 1) {
-        toast.error("Selecione ao menos um dia.");
-        return;
-      }
-      newDays = workingDays.filter((d) => d !== dayId);
-    } else {
-      newDays = [...workingDays, dayId].sort();
-    }
-
-    setWorkingDays(newDays);
-
-    try {
-      const db = getDb();
-      await db.profiles.update(userId, { working_days: newDays });
-      
-      const supabase = createClient();
-      await supabase.from("profiles").update({ working_days: newDays }).eq("id", userId);
-      
-      toast.success("Programação atualizada");
-    } catch (err) {
-      toast.error("Erro ao salvar programação.");
-      setWorkingDays(workingDays); // revert
-    }
   };
 
   const handleLogout = async () => {
@@ -125,16 +100,17 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
       <Card>
         <div className="flex items-center gap-2 mb-5">
           <User size={16} className="text-[var(--primary)]" />
-          <h2 className="text-subheading text-[var(--ink)]">Dados pessoais</h2>
+          <h2 className="text-subheading text-[var(--ink)]">Perfil</h2>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5" noValidate>
           <Field label="Nome completo" htmlFor="profile-name" error={errors.full_name?.message} required>
             <Input
               id="profile-name"
               placeholder="João da Silva"
               error={!!errors.full_name}
               {...register("full_name")}
+              className={!isDirty ? "opacity-75" : ""}
             />
           </Field>
 
@@ -143,6 +119,7 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
               id="profile-congregation"
               placeholder="Congregação Central"
               {...register("congregation_name")}
+              className={!isDirty ? "opacity-75" : ""}
             />
           </Field>
 
@@ -160,51 +137,63 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
               max={300}
               error={!!errors.monthly_goal_hours}
               {...register("monthly_goal_hours")}
+              className={!isDirty ? "opacity-75" : ""}
             />
           </Field>
 
+          {/* Schedule */}
+          <div className="pt-2 border-t border-[var(--border)]">
+            <div className="flex items-center gap-2 mb-3 mt-1">
+              <CalendarDays size={14} className="text-[var(--primary)]" />
+              <h3 className="text-label text-[var(--ink)]">Programação</h3>
+            </div>
+            
+            <div className="flex justify-between items-center gap-1">
+              {DAYS_OF_WEEK.map((day) => {
+                const currentDays = watch("working_days") || [];
+                const isSelected = currentDays.includes(day.id);
+                return (
+                  <button
+                    key={day.id}
+                    type="button"
+                    onClick={() => {
+                      if (isSelected) {
+                        if (currentDays.length > 1) {
+                          setValue("working_days", currentDays.filter(d => d !== day.id), { shouldValidate: true, shouldDirty: true });
+                        } else {
+                          toast.error("Selecione ao menos um dia.");
+                        }
+                      } else {
+                        setValue("working_days", [...currentDays, day.id].sort(), { shouldValidate: true, shouldDirty: true });
+                      }
+                    }}
+                    className={`w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-full text-[11px] font-sans font-semibold transition-all ${
+                      isSelected
+                        ? "bg-[var(--primary)] text-white shadow-sm"
+                        : "bg-[var(--surface)] border border-[var(--border)] text-[var(--ink-muted)] hover:bg-[var(--background)] opacity-75"
+                    } ${!isDirty && isSelected ? "opacity-80" : ""}`}
+                  >
+                    {day.label}
+                  </button>
+                );
+              })}
+            </div>
+            
+            <p className="text-caption text-[var(--ink-muted)] mt-3">
+              Os dias selecionados são usados para prever a viabilidade da sua meta mensal.
+            </p>
+          </div>
+
           <Button
-            type="submit"
-            variant="primary"
+            type={isDirty ? "submit" : "button"}
+            variant={isDirty ? "primary" : "secondary"}
             size="lg"
             loading={saving}
-            className="w-full mt-1"
+            className="w-full mt-2"
           >
-            Salvar alterações
+            {isDirty ? "Salvar alterações" : "Editar"}
           </Button>
         </form>
-      </Card>
-
-      {/* Schedule */}
-      <Card>
-        <div className="flex items-center gap-2 mb-4">
-          <CalendarDays size={16} className="text-[var(--primary)]" />
-          <h2 className="text-subheading text-[var(--ink)]">Programação</h2>
-        </div>
-        
-        <div className="flex justify-between items-center gap-1">
-          {DAYS_OF_WEEK.map((day) => {
-            const isSelected = workingDays.includes(day.id);
-            return (
-              <button
-                key={day.id}
-                type="button"
-                onClick={() => toggleDay(day.id)}
-                className={`w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-full text-[11px] font-sans font-semibold transition-all ${
-                  isSelected
-                    ? "bg-[var(--primary)] text-white shadow-sm"
-                    : "bg-[var(--surface)] border border-[var(--border)] text-[var(--ink-muted)] hover:bg-[var(--background)]"
-                }`}
-              >
-                {day.label}
-              </button>
-            );
-          })}
-        </div>
-        
-        <p className="text-caption text-[var(--ink-muted)] mt-4">
-          Os dias selecionados são usados para calcular o ritmo ideal e a viabilidade da sua meta mensal.
-        </p>
       </Card>
 
       {/* Quick links */}
