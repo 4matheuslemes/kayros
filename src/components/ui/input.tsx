@@ -49,7 +49,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     <input
       ref={ref}
       className={cn(
-        "w-full h-11 px-4 rounded-md text-base font-sans",
+        "w-full min-w-0 appearance-none h-11 px-4 rounded-md text-base font-sans",
         "bg-[var(--surface)] border border-[var(--border)]",
         "text-[var(--ink)] placeholder:text-[var(--ink-muted)]",
         "transition-colors duration-150",

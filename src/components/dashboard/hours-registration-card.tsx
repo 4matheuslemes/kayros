@@ -17,6 +17,7 @@ interface HoursRegistrationCardProps {
 
 export function HoursRegistrationCard({ userId, onRecordSaved }: HoursRegistrationCardProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [tab, setTab] = useState<"timer" | "manual">("timer");
   const { timerState, elapsed, elapsedMinutes, start, pause, resume, finish, reset } = useTimer();
 
   const handleFinish = () => {
@@ -42,7 +43,7 @@ export function HoursRegistrationCard({ userId, onRecordSaved }: HoursRegistrati
         </CardHeader>
 
         <div className="px-4 pb-4">
-          <Tabs defaultValue="timer" className="w-full">
+          <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="w-full">
             <TabsList className="w-full mb-4">
               <TabsTrigger value="timer" className="flex-1">Cronômetro</TabsTrigger>
               <TabsTrigger value="manual" className="flex-1">Manual</TabsTrigger>
@@ -67,6 +68,7 @@ export function HoursRegistrationCard({ userId, onRecordSaved }: HoursRegistrati
                 userId={userId} 
                 onSaved={() => {
                   onRecordSaved();
+                  setTab("timer");
                 }} 
               />
             </TabsContent>

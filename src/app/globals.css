@@ -112,15 +112,6 @@ body {
 .text-label      { font-size: 0.875rem;line-height: 1rem;    font-weight: 500; color: var(--ink); }
 
 /* ─────────────────────────────────────────────────────────────
-   Focus Ring — accessible, not generic blue
-───────────────────────────────────────────────────────────── */
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
-  border-radius: var(--radius);
-}
-
-/* ─────────────────────────────────────────────────────────────
    Scrollbar (Desktop)
 ───────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }

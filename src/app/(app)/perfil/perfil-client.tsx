@@ -192,20 +192,38 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
               variant="secondary"
               size="lg"
               className="w-full mt-2"
-              onClick={() => setIsEditing(true)}
+              onClick={(e) => {
+                e.preventDefault();
+                setIsEditing(true);
+              }}
             >
               Editar
             </Button>
           ) : (
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              loading={saving}
-              className="w-full mt-2"
-            >
-              Salvar alterações
-            </Button>
+            <div className="flex gap-3 mt-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="lg"
+                className="flex-1"
+                onClick={() => {
+                  reset();
+                  setIsEditing(false);
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                loading={saving}
+                disabled={!isDirty}
+                className="flex-1"
+              >
+                Salvar
+              </Button>
+            </div>
           )}
         </form>
       </Card>
