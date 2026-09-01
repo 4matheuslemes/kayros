@@ -1,7 +1,7 @@
 "use client";
 
-import { Clock, Users, BookOpen, ArrowRight } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { Clock, Users, BookOpen, ArrowRight, Calendar } from "lucide-react";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { formatDuration } from "@/lib/utils";
 
@@ -50,9 +50,12 @@ export function MonthSummaryCard({
 }: MonthSummaryCardProps) {
   return (
     <Card>
-      <p className="text-label text-[var(--ink-muted)] mb-4 font-sans text-xs uppercase tracking-wide">
-        Este mês
-      </p>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Calendar size={18} className="text-[var(--primary)]" />
+          Resumo do mês
+        </CardTitle>
+      </CardHeader>
       <div className="flex gap-2">
         <StatItem
           icon={Clock}

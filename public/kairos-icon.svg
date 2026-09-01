@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Fundo sólido, borda a borda: obrigatório para ícones maskable (Android) -->
+  <rect x="0" y="0" width="512" height="512" fill="#1E3A5F"/>
+
+  <!-- Chama estilizada (Kairós = "tempo oportuno" / luz), centrada dentro da safe zone -->
+  <path
+    d="M256,112
+       C206,168 176,214 176,278
+       C176,335 210,378 256,378
+       C302,378 336,335 336,278
+       C336,216 306,170 256,112 Z"
+    fill="#B8934A"
+  />
+
+  <!-- Núcleo interno sutil para dar profundidade, sem quebrar a legibilidade em tamanho pequeno -->
+  <path
+    d="M256,196
+       C232,228 220,254 220,286
+       C220,316 235,336 256,336
+       C277,336 292,316 292,286
+       C292,256 282,232 256,196 Z"
+    fill="#1E3A5F"
+    fill-opacity="0.16"
+  />
+</svg>
