@@ -18,9 +18,9 @@
   --success:        #6B9080;
 
   /* Surfaces */
-  --background:     #F5F6F4;
+  --background:     #ECEEE9;
   --surface:        #FFFFFF;
-  --border:         #E3E5E0;
+  --border:         #D8DBD3;
 
   /* Text */
   --ink:            #22262B;
@@ -46,9 +46,9 @@
   --accent:         #C9A55A;
   --success:        #7DA898;
 
-  --background:     #0F1B2B;
-  --surface:        #16283D;
-  --border:         #22364E;
+  --background:     #0B1522;
+  --surface:        #1C3350;
+  --border:         #2E4A6B;
 
   --ink:            #EDF0F2;
   --ink-muted:      #8FA3B8;

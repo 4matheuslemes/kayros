@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Plus, Search, Users } from "lucide-react";
+import { Plus, Search, Users, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
 import { AppHeader } from "@/components/layout/app-header";
-import { ContactCard } from "@/components/contacts/contact-card";
+import { SwipeableContactRow } from "@/components/contacts/swipeable-contact-row";
 import { ContactForm, type ContactFormData } from "@/components/contacts/contact-form";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { Drawer } from "@/components/ui/drawer";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useContacts } from "@/lib/db/hooks";
-import { getDb } from "@/lib/db/dexie";
+import { getDb, type Contact } from "@/lib/db/dexie";
 import { enqueueSync } from "@/lib/db/sync";
 import type { ContactStatus } from "@/lib/constants";
 
@@ -25,6 +25,8 @@ interface ContatosClientProps {
 export function ContatosClient({ userId }: ContatosClientProps) {
   const { contacts, loading, refresh } = useContacts(userId);
   const [newOpen, setNewOpen] = useState(false);
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
+  const [deletingContactId, setDeletingContactId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"todos" | ContactStatus>("todos");
@@ -66,16 +68,61 @@ export function ContatosClient({ userId }: ContatosClientProps) {
     }
   };
 
+  const handleEdit = async (data: ContactFormData) => {
+    if (!editingContact) return;
+    setSaving(true);
+    const db = getDb();
+    const now = new Date().toISOString();
+    const updated = {
+      ...editingContact,
+      name:      data.name,
+      address:   data.address ?? "",
+      phone:     data.phone ?? "",
+      interests: data.interests ?? "",
+      status:    data.status as ContactStatus,
+      updated_at: now,
+      synced: false,
+    };
+    try {
+      await db.contacts.put(updated);
+      await enqueueSync("contacts", editingContact.id, "UPDATE", updated);
+      toast.success("Interessado atualizado");
+      await refresh();
+      setEditingContact(null);
+    } catch (err) {
+      toast.error("Erro ao atualizar. Tente novamente.");
+      console.error(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingContactId) return;
+    try {
+      const db = getDb();
+      await db.contacts.delete(deletingContactId);
+      await enqueueSync("contacts", deletingContactId, "DELETE", {});
+      refresh();
+      toast.success("Interessado removido");
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao excluir.");
+    } finally {
+      setDeletingContactId(null);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <AppHeader
-        title="Contatos"
+        title="Interessados"
         right={
           <Button
             variant="primary"
             size="icon"
             onClick={() => setNewOpen(true)}
-            aria-label="Novo contato"
+            aria-label="Novo interessado"
             id="btn-new-contact"
           >
             <Plus size={20} />
@@ -123,7 +170,7 @@ export function ContatosClient({ userId }: ContatosClientProps) {
           icon={<Users size={28} />}
           title={
             contacts.length === 0
-              ? "Nenhum contato ainda"
+              ? "Nenhum interessado ainda"
               : "Nenhum resultado encontrado"
           }
           description={
@@ -135,27 +182,64 @@ export function ContatosClient({ userId }: ContatosClientProps) {
             contacts.length === 0 ? (
               <Button variant="primary" onClick={() => setNewOpen(true)} id="btn-empty-new-contact">
                 <Plus size={16} />
-                Adicionar contato
+                Adicionar interessado
               </Button>
             ) : undefined
           }
         />
       ) : (
-        <Card padding="none" className="overflow-hidden divide-y divide-[var(--border)]">
+        <div className="flex flex-col gap-3">
           {filtered.map((contact) => (
-            <ContactCard key={contact.id} contact={contact} />
+            <SwipeableContactRow
+              key={contact.id}
+              contact={contact}
+              onEdit={setEditingContact}
+              onDelete={(e, id) => setDeletingContactId(id)}
+            />
           ))}
-        </Card>
+        </div>
       )}
 
       {/* New contact drawer */}
       <Drawer
         open={newOpen}
         onClose={() => setNewOpen(false)}
-        title="Novo contato"
+        title="Novo interessado"
         description="Adicione os dados da pessoa"
       >
         <ContactForm onSubmit={handleCreate} loading={saving} />
+      </Drawer>
+
+      {/* Edit contact drawer */}
+      <Drawer
+        open={!!editingContact}
+        onClose={() => setEditingContact(null)}
+        title="Editar interessado"
+      >
+        <ContactForm 
+          defaultValues={editingContact || undefined} 
+          onSubmit={handleEdit} 
+          loading={saving} 
+          submitLabel="Salvar alterações" 
+        />
+      </Drawer>
+
+      {/* Delete contact drawer */}
+      <Drawer
+        open={!!deletingContactId}
+        onClose={() => setDeletingContactId(null)}
+        title="Excluir interessado"
+        description="Esta ação não pode ser desfeita. Tem certeza que deseja apagar esta pessoa?"
+      >
+        <div className="flex flex-col gap-3 mt-4">
+          <Button onClick={confirmDelete} variant="destructive" className="w-full" size="lg">
+            <Trash2 className="mr-2 h-4 w-4" />
+            Sim, excluir
+          </Button>
+          <Button onClick={() => setDeletingContactId(null)} variant="secondary" className="w-full" size="lg">
+            Cancelar
+          </Button>
+        </div>
       </Drawer>
     </div>
   );

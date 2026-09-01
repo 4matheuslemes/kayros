@@ -46,6 +46,7 @@ export function DashboardClient({ userId, profile }: DashboardClientProps) {
       <MonthlyGoalCard
         completedMinutes={totalMinutes}
         goalHours={profile.monthly_goal_hours}
+        workingDays={profile.working_days ?? [1, 2, 3, 4, 5, 6, 7]}
       />
 
       <MonthSummaryCard

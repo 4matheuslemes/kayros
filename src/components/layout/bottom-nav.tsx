@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 const NAV_ITEMS = [
   { href: "/",           icon: Home,       label: "Início"    },
   { href: "/historico",  icon: ScrollText, label: "Histórico" },
-  { href: "/contatos",   icon: Users,      label: "Contatos"  },
+  { href: "/contatos",   icon: Users,      label: "Interessados"  },
   { href: "/perfil",     icon: User,       label: "Perfil"    },
 ] as const;
 
@@ -21,12 +21,14 @@ export function BottomNav() {
         "fixed z-40",
         "bottom-[calc(env(safe-area-inset-bottom)+1rem)]",
         "left-4 right-4 mx-auto max-w-md",
-        "backdrop-blur-xl",
-        "border border-[var(--border)] rounded-full shadow-lg shadow-black/5",
+        "backdrop-blur-lg",
+        "border border-black/10 dark:border-white/15 rounded-full",
+        "shadow-[0_8px_30px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.8)]",
+        "dark:shadow-[0_8px_30px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.15)]",
         "flex items-stretch overflow-hidden",
         "h-[64px]"
       )}
-      style={{ backgroundColor: "color-mix(in srgb, var(--surface) 85%, transparent)" }}
+      style={{ backgroundColor: "color-mix(in srgb, var(--surface) 92%, transparent)" }}
       aria-label="Navegação principal"
     >
       {NAV_ITEMS.map(({ href, icon: Icon, label }) => {

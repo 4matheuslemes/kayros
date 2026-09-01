@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { LogOut, User, FileText } from "lucide-react";
+import { LogOut, User, FileText, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/app-header";
 import { Card } from "@/components/ui/card";
@@ -13,8 +13,18 @@ import { Button } from "@/components/ui/button";
 import { Input, Field } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
 import { APP_NAME } from "@/lib/constants";
-import type { Profile } from "@/lib/db/dexie";
+import { getDb, type Profile } from "@/lib/db/dexie";
 import Link from "next/link";
+
+const DAYS_OF_WEEK = [
+  { id: 1, label: "SG" },
+  { id: 2, label: "TE" },
+  { id: 3, label: "QA" },
+  { id: 4, label: "QI" },
+  { id: 5, label: "SX" },
+  { id: 6, label: "SB" },
+  { id: 7, label: "DO" },
+];
 
 const schema = z.object({
   full_name:              z.string().min(1, "Nome obrigatório"),
@@ -34,6 +44,7 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [workingDays, setWorkingDays] = useState<number[]>(profile.working_days ?? [1, 2, 3, 4, 5, 6, 7]);
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -53,13 +64,49 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
       congregation_name:   data.congregation_name ?? null,
       monthly_goal_hours:  data.monthly_goal_hours,
       service_year_start_month: profile.service_year_start_month,
+      working_days:        workingDays,
     });
     if (error) {
       toast.error("Erro ao salvar. Tente novamente.");
     } else {
       toast.success("Perfil atualizado");
+      const db = getDb();
+      await db.profiles.update(userId, {
+        full_name: data.full_name,
+        congregation_name: data.congregation_name ?? undefined,
+        monthly_goal_hours: data.monthly_goal_hours,
+      });
     }
     setSaving(false);
+  };
+
+  const toggleDay = async (dayId: number) => {
+    const isSelected = workingDays.includes(dayId);
+    let newDays: number[];
+    if (isSelected) {
+      if (workingDays.length === 1) {
+        toast.error("Selecione ao menos um dia.");
+        return;
+      }
+      newDays = workingDays.filter((d) => d !== dayId);
+    } else {
+      newDays = [...workingDays, dayId].sort();
+    }
+
+    setWorkingDays(newDays);
+
+    try {
+      const db = getDb();
+      await db.profiles.update(userId, { working_days: newDays });
+      
+      const supabase = createClient();
+      await supabase.from("profiles").update({ working_days: newDays }).eq("id", userId);
+      
+      toast.success("Programação atualizada");
+    } catch (err) {
+      toast.error("Erro ao salvar programação.");
+      setWorkingDays(workingDays); // revert
+    }
   };
 
   const handleLogout = async () => {
@@ -126,6 +173,38 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
             Salvar alterações
           </Button>
         </form>
+      </Card>
+
+      {/* Schedule */}
+      <Card>
+        <div className="flex items-center gap-2 mb-4">
+          <CalendarDays size={16} className="text-[var(--primary)]" />
+          <h2 className="text-subheading text-[var(--ink)]">Programação</h2>
+        </div>
+        
+        <div className="flex justify-between items-center gap-1">
+          {DAYS_OF_WEEK.map((day) => {
+            const isSelected = workingDays.includes(day.id);
+            return (
+              <button
+                key={day.id}
+                type="button"
+                onClick={() => toggleDay(day.id)}
+                className={`w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-full text-[11px] font-sans font-semibold transition-all ${
+                  isSelected
+                    ? "bg-[var(--primary)] text-white shadow-sm"
+                    : "bg-[var(--surface)] border border-[var(--border)] text-[var(--ink-muted)] hover:bg-[var(--background)]"
+                }`}
+              >
+                {day.label}
+              </button>
+            );
+          })}
+        </div>
+        
+        <p className="text-caption text-[var(--ink-muted)] mt-4">
+          Os dias selecionados são usados para calcular o ritmo ideal e a viabilidade da sua meta mensal.
+        </p>
       </Card>
 
       {/* Quick links */}

@@ -41,7 +41,7 @@ export function ContactDetailClient({ contactId }: { contactId: string }) {
     try {
       await db.contacts.put(updated);
       await enqueueSync("contacts", contact.id, "UPDATE", updated);
-      toast.success("Contato atualizado");
+      toast.success("Interessado atualizado");
       await refresh();
       setEditOpen(false);
     } catch (err) {
@@ -78,7 +78,7 @@ export function ContactDetailClient({ contactId }: { contactId: string }) {
   if (!contact) {
     return (
       <div className="flex items-center justify-center h-40 text-[var(--ink-muted)] font-sans text-sm">
-        Contato não encontrado.
+        Interessado não encontrado.
       </div>
     );
   }
@@ -188,7 +188,7 @@ export function ContactDetailClient({ contactId }: { contactId: string }) {
         onSaved={refresh}
       />
 
-      <Drawer open={editOpen} onClose={() => setEditOpen(false)} title="Editar contato">
+      <Drawer open={editOpen} onClose={() => setEditOpen(false)} title="Editar interessado">
         <ContactForm
           defaultValues={contact}
           onSubmit={handleEdit}

@@ -48,6 +48,7 @@ export interface Profile {
   congregation_name?: string;
   monthly_goal_hours: number;
   service_year_start_month: number;
+  working_days?: number[];
 }
 
 export type SyncOperation = "INSERT" | "UPDATE" | "DELETE";

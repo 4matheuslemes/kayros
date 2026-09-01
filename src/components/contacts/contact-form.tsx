@@ -29,7 +29,7 @@ export function ContactForm({
   defaultValues,
   onSubmit,
   loading,
-  submitLabel = "Salvar contato",
+  submitLabel = "Salvar interessado",
 }: ContactFormProps) {
   const {
     register,
