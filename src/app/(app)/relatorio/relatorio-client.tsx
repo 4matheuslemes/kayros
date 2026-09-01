@@ -13,6 +13,7 @@ import { useMonthRecords, useContacts } from "@/lib/db/hooks";
 import { formatDuration } from "@/lib/utils";
 import type { Profile } from "@/lib/db/dexie";
 import { APP_NAME } from "@/lib/constants";
+import Loading from "./loading";
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => ({
   value: String(i + 1),
@@ -35,11 +36,13 @@ export function RelatorioClient({ userId, profile }: RelatorioClientProps) {
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [copied, setCopied] = useState(false);
 
-  const { totalMinutes, records } = useMonthRecords(userId, year, month);
-  const { contacts } = useContacts(userId);
+  const { totalMinutes, records, loading: loadingRecords } = useMonthRecords(userId, year, month);
+  const { contacts, loading: loadingContacts } = useContacts(userId);
 
   const revisitas     = contacts.filter((c) => c.status === "revisita").length;
   const estudosAtivos = contacts.filter((c) => c.status === "estudo_ativo").length;
+
+  const loading = loadingRecords || loadingContacts;
 
   const monthLabel = format(new Date(year, month - 1), "MMMM 'de' yyyy", { locale: ptBR });
   const hoursTotal = (totalMinutes / 60).toFixed(1);
@@ -71,6 +74,8 @@ export function RelatorioClient({ userId, profile }: RelatorioClientProps) {
   };
 
   const handlePrint = () => window.print();
+
+  if (loading) return <Loading />;
 
   return (
     <div className="flex flex-col gap-5">

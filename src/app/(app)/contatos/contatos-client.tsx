@@ -17,6 +17,7 @@ import { useContacts } from "@/lib/db/hooks";
 import { getDb, type Contact } from "@/lib/db/dexie";
 import { enqueueSync } from "@/lib/db/sync";
 import type { ContactStatus } from "@/lib/constants";
+import Loading from "./loading";
 
 interface ContatosClientProps {
   userId: string;
@@ -113,6 +114,8 @@ export function ContatosClient({ userId }: ContatosClientProps) {
     }
   };
 
+  if (loading) return <Loading />;
+
   return (
     <div className="flex flex-col gap-4">
       <AppHeader
@@ -165,7 +168,7 @@ export function ContatosClient({ userId }: ContatosClientProps) {
       </div>
 
       {/* List */}
-      {loading ? null : filtered.length === 0 ? (
+      {filtered.length === 0 ? (
         <EmptyState
           icon={<Users size={28} />}
           title={

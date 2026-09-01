@@ -15,6 +15,7 @@ import { EditRecordSheet } from "@/components/historico/edit-record-sheet";
 import { SwipeableRecordRow } from "@/components/historico/swipeable-record-row";
 import { Drawer } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
+import Loading from "./loading";
 
 export function HistoricoClient({ userId }: { userId: string }) {
   const { records, loading, refresh } = useDailyRecords(userId);
@@ -49,6 +50,8 @@ export function HistoricoClient({ userId }: { userId: string }) {
     return acc;
   }, {} as Record<string, typeof records>);
 
+  if (loading) return <Loading />;
+
   return (
     <div className="flex flex-col gap-4 pb-8">
       <div className="mb-2">
@@ -63,9 +66,7 @@ export function HistoricoClient({ userId }: { userId: string }) {
         subtitle="Extrato completo de suas atividades"
       />
 
-      {loading ? (
-        <div className="p-8 text-center text-[var(--ink-muted)]">Carregando...</div>
-      ) : records.length === 0 ? (
+      {records.length === 0 ? (
         <div className="p-8 text-center text-[var(--ink-muted)] border border-dashed rounded-lg m-4">
           Nenhum registro encontrado.
         </div>
