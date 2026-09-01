@@ -68,25 +68,25 @@ export function useMonthRecords(userId: string | undefined, year?: number, month
   const [records, setRecords] = useState<DailyRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const refresh = useCallback(async () => {
     if (!userId) return;
     const db = getDb();
-
     const monthStr = `${y}-${String(m).padStart(2, "0")}`;
 
-    db.daily_records
+    const recs = await db.daily_records
       .where("user_id")
       .equals(userId)
       .filter((r) => r.date.startsWith(monthStr))
-      .toArray()
-      .then((recs) => {
-        setRecords(recs);
-        setTotalMinutes(recs.reduce((s, r) => s + r.duration_minutes, 0));
-        setLoading(false);
-      });
+      .toArray();
+      
+    setRecords(recs);
+    setTotalMinutes(recs.reduce((s, r) => s + r.duration_minutes, 0));
+    setLoading(false);
   }, [userId, y, m]);
 
-  return { totalMinutes, records, loading };
+  useEffect(() => { void refresh(); }, [refresh]);
+
+  return { totalMinutes, records, loading, refresh };
 }
 
 // ─────────────────────────────────────────────────────────────

@@ -6,6 +6,7 @@ import { MonthSummaryCard } from "@/components/dashboard/month-summary-card";
 import { UpcomingVisitsCard } from "@/components/dashboard/upcoming-visits-card";
 import { ActivityBreakdownCard } from "@/components/dashboard/activity-breakdown-card";
 import { AnnualChart } from "@/components/dashboard/annual-chart";
+import { HoursRegistrationCard } from "@/components/dashboard/hours-registration-card";
 import { useMonthRecords, useDailyRecords, useContacts, useUpcomingVisits } from "@/lib/db/hooks";
 import type { Profile } from "@/lib/db/dexie";
 
@@ -15,9 +16,9 @@ interface DashboardClientProps {
 }
 
 export function DashboardClient({ userId, profile }: DashboardClientProps) {
-  const { totalMinutes } = useMonthRecords(userId);
-  const { records }      = useDailyRecords(userId);
-  const { contacts }     = useContacts(userId);
+  const { totalMinutes, refresh: refreshMonth } = useMonthRecords(userId);
+  const { records, refresh: refreshDaily }      = useDailyRecords(userId);
+  const { contacts }                            = useContacts(userId);
   const upcoming         = useUpcomingVisits(userId, 3);
 
   const revisitas     = contacts.filter((c) => c.status === "revisita").length;
@@ -32,6 +33,14 @@ export function DashboardClient({ userId, profile }: DashboardClientProps) {
       <AppHeader
         title={`${greeting}, ${firstName}`}
         subtitle={profile.congregation_name ?? undefined}
+      />
+
+      <HoursRegistrationCard 
+        userId={userId} 
+        onRecordSaved={() => {
+          refreshMonth();
+          refreshDaily();
+        }}
       />
 
       <MonthlyGoalCard

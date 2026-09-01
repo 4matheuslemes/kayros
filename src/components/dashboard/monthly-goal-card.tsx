@@ -47,7 +47,7 @@ export function MonthlyGoalCard({ completedMinutes, goalHours }: MonthlyGoalCard
       <ProgressBar value={pct} size="md" goalMet={goalMet} showLabel />
 
       {/* Pace row */}
-      <div className="mt-4 flex items-center gap-4 pt-4 border-t border-[var(--border)]">
+      <div className="mt-2 flex items-center gap-4 pt-2">
         <div className="flex items-center gap-1.5 text-[var(--ink-muted)]">
           <Flame size={14} />
           <span className="text-xs font-sans">

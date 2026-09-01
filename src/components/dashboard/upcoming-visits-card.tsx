@@ -34,7 +34,7 @@ export function UpcomingVisitsCard({ visits }: UpcomingVisitsCardProps) {
           className="py-8"
         />
       ) : (
-        <ul className="divide-y divide-[var(--border)]">
+        <ul className="flex flex-col">
           {visits.map((v) => {
             const date = parseISO(v.next_visit_date!);
             const overdue = isPast(date);
@@ -87,7 +87,7 @@ export function UpcomingVisitsCard({ visits }: UpcomingVisitsCardProps) {
         </ul>
       )}
 
-      <div className="px-5 py-3 border-t border-[var(--border)]">
+      <div className="px-5 py-3 pt-2">
         <Link
           href="/contatos"
           className="text-xs font-medium font-sans text-[var(--primary)] hover:underline"

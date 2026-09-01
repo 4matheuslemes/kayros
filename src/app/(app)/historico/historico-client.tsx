@@ -7,10 +7,39 @@ import { ACTIVITY_CATEGORIES } from "@/lib/constants";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { getDb, type DailyRecord } from "@/lib/db/dexie";
+import { enqueueSync } from "@/lib/db/sync";
+import { EditRecordSheet } from "@/components/historico/edit-record-sheet";
+import { SwipeableRecordRow } from "@/components/historico/swipeable-record-row";
+import { Drawer } from "@/components/ui/drawer";
+import { Button } from "@/components/ui/button";
 
 export function HistoricoClient({ userId }: { userId: string }) {
-  const { records, loading } = useDailyRecords(userId);
+  const { records, loading, refresh } = useDailyRecords(userId);
+  const [editingRecord, setEditingRecord] = useState<DailyRecord | null>(null);
+  const [deletingRecordId, setDeletingRecordId] = useState<string | null>(null);
+
+  const handleDeleteRequest = (e: React.MouseEvent, recordId: string) => {
+    e.stopPropagation();
+    setDeletingRecordId(recordId);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingRecordId) return;
+    try {
+      const db = getDb();
+      await db.daily_records.delete(deletingRecordId);
+      await enqueueSync("daily_records", deletingRecordId, "DELETE", { id: deletingRecordId });
+      refresh();
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao excluir.");
+    } finally {
+      setDeletingRecordId(null);
+    }
+  };
 
   // Group by month
   const grouped = records.reduce((acc, record) => {
@@ -48,49 +77,54 @@ export function HistoricoClient({ userId }: { userId: string }) {
                 {month}
               </h3>
               <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-hidden shadow-sm">
-                {monthRecords.map((record, i) => {
-                  const catLabel = ACTIVITY_CATEGORIES.find(c => c.value === record.category)?.label ?? record.category;
-                  const isLast = i === monthRecords.length - 1;
-                  
-                  return (
-                    <div 
-                      key={record.id} 
-                      className={`flex flex-col p-4 ${!isLast ? "border-b border-[var(--border)]" : ""}`}
-                    >
-                      <div className="flex justify-between items-start mb-1">
-                        <span className="text-body font-medium text-[var(--ink)]">
-                          {formatDuration(record.duration_minutes)}
-                        </span>
-                        <span className="text-caption text-[var(--ink-muted)] tabular-nums">
-                          {format(parseISO(record.date), "dd/MM/yyyy")}
-                        </span>
-                      </div>
-                      
-                      <div className="flex justify-between items-end mt-1">
-                        <span className="text-body-sm text-[var(--ink-muted)] flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-[var(--accent)]" />
-                          {catLabel}
-                        </span>
-                        {record.source === "manual" && (
-                          <span className="text-2xs bg-[var(--border)] text-[var(--ink-muted)] px-1.5 py-0.5 rounded uppercase font-bold">
-                            Manual
-                          </span>
-                        )}
-                      </div>
-
-                      {record.notes && (
-                        <p className="text-caption text-[var(--ink-muted)] mt-2 pt-2 border-t border-dashed border-[var(--border)]">
-                          "{record.notes}"
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
+                {monthRecords.map((record, i) => (
+                  <SwipeableRecordRow
+                    key={record.id}
+                    record={record}
+                    isLast={i === monthRecords.length - 1}
+                    onEdit={setEditingRecord}
+                    onDelete={handleDeleteRequest}
+                  />
+                ))}
               </div>
             </div>
           ))}
         </div>
       )}
+
+      <EditRecordSheet
+        open={!!editingRecord}
+        onClose={() => setEditingRecord(null)}
+        record={editingRecord}
+        onSaved={refresh}
+      />
+
+      <Drawer
+        open={!!deletingRecordId}
+        onClose={() => setDeletingRecordId(null)}
+        title="Excluir registro"
+        description="Esta ação não pode ser desfeita. Tem certeza que deseja apagar este relatório de horas?"
+      >
+        <div className="flex flex-col gap-3 mt-4">
+          <Button
+            onClick={confirmDelete}
+            variant="destructive"
+            className="w-full"
+            size="lg"
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Sim, excluir registro
+          </Button>
+          <Button
+            onClick={() => setDeletingRecordId(null)}
+            variant="secondary"
+            className="w-full"
+            size="lg"
+          >
+            Cancelar
+          </Button>
+        </div>
+      </Drawer>
     </div>
   );
 }
