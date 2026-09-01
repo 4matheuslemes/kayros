@@ -7,7 +7,7 @@ const buttonVariants = cva(
   // base
   [
     "inline-flex items-center justify-center gap-2",
-    "font-sans font-medium rounded transition-all duration-150",
+    "font-sans font-medium transition-all duration-150",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2",
     "disabled:pointer-events-none disabled:opacity-50",
     "select-none",
@@ -16,23 +16,23 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary: [
-          "bg-[var(--primary)] text-white",
+          "bg-[var(--primary)] text-white rounded-full",
           "hover:bg-[var(--primary-dark)] active:scale-[0.98]",
         ],
         secondary: [
-          "bg-[var(--surface)] text-[var(--ink)] border border-[var(--border)]",
+          "bg-[var(--surface)] text-[var(--ink)] border border-[var(--border)] rounded-md",
           "hover:bg-[var(--background)] active:scale-[0.98]",
         ],
         ghost: [
-          "text-[var(--ink)] bg-transparent",
+          "text-[var(--ink)] bg-transparent rounded-md",
           "hover:bg-[var(--background)] active:scale-[0.98]",
         ],
         destructive: [
-          "bg-red-600 text-white",
+          "bg-red-600 text-white rounded-full",
           "hover:bg-red-700 active:scale-[0.98]",
         ],
         accent: [
-          "bg-[var(--accent)] text-white",
+          "bg-[var(--accent)] text-white rounded-full",
           "hover:opacity-90 active:scale-[0.98]",
         ],
       },

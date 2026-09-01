@@ -66,7 +66,7 @@ export function HistoricoClient({ userId }: { userId: string }) {
       {loading ? (
         <div className="p-8 text-center text-[var(--ink-muted)]">Carregando...</div>
       ) : records.length === 0 ? (
-        <div className="p-8 text-center text-[var(--ink-muted)] border border-dashed rounded-xl m-4">
+        <div className="p-8 text-center text-[var(--ink-muted)] border border-dashed rounded-lg m-4">
           Nenhum registro encontrado.
         </div>
       ) : (
@@ -76,12 +76,11 @@ export function HistoricoClient({ userId }: { userId: string }) {
               <h3 className="text-label font-bold text-[var(--primary)] uppercase tracking-wide mb-3 px-1 capitalize">
                 {month}
               </h3>
-              <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl overflow-hidden shadow-sm">
-                {monthRecords.map((record, i) => (
+              <div className="flex flex-col gap-3">
+                {monthRecords.map((record) => (
                   <SwipeableRecordRow
                     key={record.id}
                     record={record}
-                    isLast={i === monthRecords.length - 1}
                     onEdit={setEditingRecord}
                     onDelete={handleDeleteRequest}
                   />

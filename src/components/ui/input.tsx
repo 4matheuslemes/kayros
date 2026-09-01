@@ -49,7 +49,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     <input
       ref={ref}
       className={cn(
-        "w-full h-11 px-4 rounded text-base font-sans",
+        "w-full h-11 px-4 rounded-md text-base font-sans",
         "bg-[var(--surface)] border border-[var(--border)]",
         "text-[var(--ink)] placeholder:text-[var(--ink-muted)]",
         "transition-colors duration-150",
@@ -76,7 +76,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     <textarea
       ref={ref}
       className={cn(
-        "w-full px-4 py-3 rounded text-base font-sans resize-none",
+        "w-full px-4 py-3 rounded-md text-base font-sans resize-none",
         "bg-[var(--surface)] border border-[var(--border)]",
         "text-[var(--ink)] placeholder:text-[var(--ink-muted)]",
         "transition-colors duration-150 min-h-[100px]",
@@ -105,7 +105,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     <select
       ref={ref}
       className={cn(
-        "w-full h-11 px-4 rounded text-base font-sans appearance-none",
+        "w-full h-11 px-4 rounded-md text-base font-sans appearance-none",
         "bg-[var(--surface)] border border-[var(--border)]",
         "text-[var(--ink)]",
         "transition-colors duration-150 cursor-pointer",

@@ -10,18 +10,17 @@ import { cn } from "@/lib/utils";
 
 interface SwipeableRecordRowProps {
   record: DailyRecord;
-  isLast: boolean;
   onEdit: (record: DailyRecord) => void;
   onDelete: (e: React.MouseEvent, id: string) => void;
 }
 
-export function SwipeableRecordRow({ record, isLast, onEdit, onDelete }: SwipeableRecordRowProps) {
+export function SwipeableRecordRow({ record, onEdit, onDelete }: SwipeableRecordRowProps) {
   const [offset, setOffset] = useState(0);
   const [isSwiping, setIsSwiping] = useState(false);
   const startX = useRef<number | null>(null);
   const currentX = useRef<number | null>(null);
 
-  const maxOffset = -120; // width of the two buttons (approx 60px each)
+  const maxOffset = -120; // width of the two buttons
 
   const handleTouchStart = (e: React.TouchEvent) => {
     startX.current = e.touches[0].clientX;
@@ -59,34 +58,34 @@ export function SwipeableRecordRow({ record, isLast, onEdit, onDelete }: Swipeab
   const catLabel = ACTIVITY_CATEGORIES.find((c) => c.value === record.category)?.label ?? record.category;
 
   return (
-    <div className={cn("relative overflow-hidden", !isLast && "border-b border-[var(--border)]")}>
+    <div className="relative">
       {/* Background Actions Layer */}
-      <div className="absolute inset-y-0 right-0 w-[120px]">
+      <div className="absolute inset-y-0 right-0 flex items-center justify-end gap-2 pr-1">
         <button
           onClick={() => {
             setOffset(0);
             onEdit(record);
           }}
-          className="absolute inset-y-0 left-0 w-[60px] flex items-center justify-center bg-[var(--primary)] hover:bg-[var(--primary-dark)] transition-colors text-white"
+          className="w-12 h-12 rounded-full flex items-center justify-center bg-[var(--primary)] text-white hover:bg-[var(--primary-dark)] transition-colors shadow-sm"
           aria-label="Editar"
         >
-          <Edit2 size={20} />
+          <Edit2 size={18} />
         </button>
         <button
           onClick={(e) => {
             setOffset(0);
             onDelete(e, record.id);
           }}
-          className="absolute inset-y-0 right-0 w-[60px] flex items-center justify-center bg-red-500 hover:bg-red-600 transition-colors text-white"
+          className="w-12 h-12 rounded-full flex items-center justify-center bg-red-500 text-white hover:bg-red-600 transition-colors shadow-sm"
           aria-label="Excluir"
         >
-          <Trash2 size={20} />
+          <Trash2 size={18} />
         </button>
       </div>
 
       {/* Foreground Content Layer */}
       <div
-        className="relative flex flex-col p-4 bg-[var(--surface)] w-full transition-transform"
+        className="relative flex flex-col p-4 bg-[var(--surface)] w-full border border-[var(--border)] rounded-lg shadow-sm transition-transform"
         style={{
           transform: `translateX(${offset}px)`,
           transitionDuration: isSwiping ? "0ms" : "300ms",
@@ -104,14 +103,16 @@ export function SwipeableRecordRow({ record, isLast, onEdit, onDelete }: Swipeab
           </span>
         </div>
 
-        <div className="flex justify-between items-end mt-1">
-          <span className="text-body-sm text-[var(--ink-muted)] flex items-center gap-2">
+        <div className="flex items-center gap-4 mt-1">
+          <span className="text-body-sm text-[var(--ink-muted)] flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-[var(--accent)]" />
-            {catLabel}
+            <span className="capitalize">{catLabel}</span>
           </span>
+          
           {record.source === "manual" && (
-            <span className="text-2xs bg-[var(--border)] text-[var(--ink-muted)] px-1.5 py-0.5 rounded uppercase font-bold">
-              Manual
+            <span className="text-body-sm text-[var(--ink-muted)] flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[var(--ink-muted)] opacity-50" />
+              <span>Manual</span>
             </span>
           )}
         </div>

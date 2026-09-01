@@ -1,6 +1,12 @@
 @import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Inter:wght@400;500;600&display=swap");
 @import "tailwindcss";
 
+@theme {
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+}
+
 /* ─────────────────────────────────────────────────────────────
    CSS Custom Properties — Light Mode (default)
 ───────────────────────────────────────────────────────────── */
@@ -25,8 +31,10 @@
   --font-inter:     'Inter', system-ui, sans-serif;
 
   /* Misc */
-  --radius:         10px;
-  --bottom-nav-h:   64px;
+  --radius-sm:      10px;
+  --radius-md:      16px;
+  --radius-lg:      24px;
+  --bottom-nav-h:   96px;
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -168,6 +176,6 @@ body {
 .card-base {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   box-shadow: 0 1px 3px 0 rgba(0,0,0,0.06);
 }

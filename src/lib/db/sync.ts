@@ -38,9 +38,12 @@ async function processSyncItem(
   switch (operation) {
     case "INSERT":
     case "UPDATE": {
+      const cleanPayload = { ...payload } as Record<string, unknown>;
+      delete cleanPayload.synced; // Remove client-only flag before sending to Supabase
+
       const { error } = await supabase
         .from(table_name)
-        .upsert(payload as Record<string, unknown>);
+        .upsert(cleanPayload);
       if (error) throw error;
       break;
     }

@@ -18,11 +18,15 @@ export function BottomNav() {
   return (
     <nav
       className={cn(
-        "fixed bottom-0 inset-x-0 z-40",
-        "bg-[var(--surface)] border-t border-[var(--border)]",
-        "flex items-stretch",
-        "h-[var(--bottom-nav-h)] safe-area-inset-bottom"
+        "fixed z-40",
+        "bottom-[calc(env(safe-area-inset-bottom)+1rem)]",
+        "left-4 right-4 mx-auto max-w-md",
+        "backdrop-blur-xl",
+        "border border-[var(--border)] rounded-full shadow-lg shadow-black/5",
+        "flex items-stretch overflow-hidden",
+        "h-[64px]"
       )}
+      style={{ backgroundColor: "color-mix(in srgb, var(--surface) 85%, transparent)" }}
       aria-label="Navegação principal"
     >
       {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
