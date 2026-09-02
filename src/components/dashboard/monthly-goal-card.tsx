@@ -1,9 +1,13 @@
 "use client";
 
-import { Target, TrendingUp, Flame } from "lucide-react";
+import { Target, Clock, CalendarDays, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { calculateMonthlyGoal } from "@/lib/goals/calculate-monthly-goal";
+import { cn } from "@/lib/utils";
+import { formatHours } from "@/lib/format";
+import { useAnimatedNumber } from "@/hooks/use-animated-number";
 
 interface MonthlyGoalCardProps {
   completedMinutes: number;
@@ -13,32 +17,52 @@ interface MonthlyGoalCardProps {
 
 export function MonthlyGoalCard({ completedMinutes, goalHours, workingDays }: MonthlyGoalCardProps) {
   const goalMinutes = goalHours * 60;
-  const pct         = Math.min(100, (completedMinutes / goalMinutes) * 100);
-  const goalMet     = completedMinutes >= goalMinutes;
+  const rawHoursDone = completedMinutes / 60;
+  const goalMet = completedMinutes >= goalMinutes;
 
   const calc = calculateMonthlyGoal({
     today: new Date(),
     hoursGoal: goalHours,
-    hoursDone: completedMinutes / 60,
+    hoursDone: rawHoursDone,
     workingDays,
   });
 
-  const completedHrs = (completedMinutes / 60).toFixed(1);
-  const daysLeft     = calc.scheduledDaysRemaining;
+  const animatedHoursDone = useAnimatedNumber(rawHoursDone);
+  const animatedPct = Math.min(100, (animatedHoursDone / goalHours) * 100);
+  const hoursRemaining = Math.max(0, goalHours - animatedHoursDone);
+
+  const daysLeft = calc.scheduledDaysRemaining;
   
   // format pace
   const paceH = Math.floor(calc.idealHoursPerScheduledDay);
   const paceM = Math.round((calc.idealHoursPerScheduledDay - paceH) * 60);
-  const paceText = calc.idealHoursPerScheduledDay === Infinity 
-    ? "—" 
-    : paceH > 0 && paceM > 0 
-      ? `${paceH}h${paceM}m/dia prog.`
-      : paceH > 0
-        ? `${paceH}h/dia prog.`
-        : `${paceM}m/dia prog.`;
+
+  const statusColorText = goalMet ? 'text-[var(--success)]' :
+    calc.status === 'impossible' ? 'text-red-500' :
+    calc.status === 'tight' ? 'text-[var(--accent)]' :
+    'text-[var(--success)]';
+
+  const statusColorBorder = goalMet ? 'border-l-[var(--success)]' :
+    calc.status === 'impossible' ? 'border-l-red-500' :
+    calc.status === 'tight' ? 'border-l-[var(--accent)]' :
+    'border-l-[var(--success)]';
+
+  const statusColorBg = goalMet ? 'bg-[var(--success)]/5' :
+    calc.status === 'impossible' ? 'bg-red-500/5' :
+    calc.status === 'tight' ? 'bg-[var(--accent)]/5' :
+    'bg-[var(--success)]/5';
+
+  const PaceIcon = calc.paceStatus === "ahead" ? TrendingUp :
+                   calc.paceStatus === "behind" ? TrendingDown : Minus;
+  
+  const paceBadgeVariant = calc.paceStatus === "ahead" ? "success" :
+                           calc.paceStatus === "behind" ? "accent" : "default";
+
+  const paceLabel = calc.paceStatus === "ahead" ? "Adiantado" :
+                    calc.paceStatus === "behind" ? "Atrasado" : "No ritmo";
 
   return (
-    <Card className="overflow-hidden">
+    <Card className={cn("overflow-hidden border-l-4 transition-colors duration-500", statusColorBorder, statusColorBg)}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Target size={18} className="text-[var(--primary)]" />
@@ -52,43 +76,73 @@ export function MonthlyGoalCard({ completedMinutes, goalHours, workingDays }: Mo
       </CardHeader>
 
       <div className="mb-4">
-        <div className="flex items-baseline gap-1.5">
-          <span className="font-display font-semibold text-2xl text-[var(--ink)]">
-            {completedHrs}h
+        <div className="flex items-baseline gap-1.5 mb-1">
+          <span className={cn("font-display font-semibold text-2xl transition-all duration-300", statusColorText)}>
+            {formatHours(animatedHoursDone)}
           </span>
           <span className="text-body-sm text-[var(--ink-muted)]">
-            de {goalHours}h
-          </span>
-        </div>
-      </div>
-
-      <ProgressBar value={pct} size="md" goalMet={goalMet} showLabel />
-
-      <div className="mt-2 flex items-center gap-4 pt-2">
-        <div className={`flex items-center gap-1.5 ${
-          calc.status === 'impossible' ? 'text-red-500' :
-          calc.status === 'tight' ? 'text-amber-500' :
-          'text-[var(--ink-muted)]'
-        }`}>
-          <Flame size={14} />
-          <span className="text-xs font-sans">
-            {goalMet
-              ? "Meta atingida — continue!"
-              : calc.status === 'impossible'
-                ? "Inviável nos dias prog."
-                : calc.status === 'tight'
-                  ? `Puxado, ≈ ${paceText}`
-                  : `≈ ${paceText}`
-            }
+            de {formatHours(goalHours)}
           </span>
         </div>
         {!goalMet && (
-          <div className="ml-auto flex items-center gap-1.5 text-[var(--ink-muted)]">
-            <TrendingUp size={14} />
-            <span className="text-xs font-sans">{daysLeft} dias prog.</span>
+          <div className="text-sm font-medium text-[var(--ink)]">
+            Faltam {formatHours(hoursRemaining)}
           </div>
         )}
       </div>
+
+      <div className="flex justify-between items-end mb-1.5">
+        <div className="flex items-center gap-2">
+          <span className="text-caption text-[var(--ink-muted)]">Progresso</span>
+          {calc.totalScheduledDaysInMonth > 0 && !goalMet && (
+            <Badge variant={paceBadgeVariant} className="px-1.5 py-0">
+              <PaceIcon size={12} className="mr-0.5" />
+              {paceLabel}
+            </Badge>
+          )}
+        </div>
+        <span className={cn("text-sm font-semibold font-sans", goalMet ? "text-[var(--success)]" : "text-[var(--ink)]")}>
+          {animatedPct.toFixed(0)}%
+        </span>
+      </div>
+      
+      <ProgressBar value={animatedPct} size="md" goalMet={goalMet} status={calc.status} showLabel={false} />
+
+      {!goalMet && (
+        <>
+          <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-[var(--border)]">
+            <div>
+              <div className="flex items-center gap-1.5 text-[var(--ink-muted)] mb-1">
+                <Clock size={16} />
+                <span className={cn("font-display font-semibold text-lg", statusColorText)}>
+                  {calc.idealHoursPerScheduledDay === Infinity ? "—" : `${paceH}h${paceM}m`}
+                </span>
+              </div>
+              <span className="text-xs text-[var(--ink-muted)] leading-tight block">
+                por dia programado
+              </span>
+            </div>
+            <div>
+               <div className="flex items-center gap-1.5 text-[var(--ink-muted)] mb-1">
+                <CalendarDays size={16} />
+                <span className={cn("font-display font-semibold text-lg", statusColorText)}>
+                  {daysLeft}
+                </span>
+              </div>
+              <span className="text-xs text-[var(--ink-muted)] leading-tight block">
+                dias programados restantes
+              </span>
+            </div>
+          </div>
+          
+          {calc.status === 'tight' && (
+            <p className="text-xs text-[var(--ink-muted)] mt-4">Ritmo puxado, mas dá.</p>
+          )}
+          {calc.status === 'impossible' && (
+            <p className="text-xs text-red-500 mt-4">Meta não é mais alcançável este mês com os dias programados.</p>
+          )}
+        </>
+      )}
     </Card>
   );
 }

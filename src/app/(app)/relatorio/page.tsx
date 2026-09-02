@@ -19,7 +19,7 @@ export default async function RelatorioPage() {
   return (
     <RelatorioClient
       userId={user.id}
-      profile={profile ?? { id: user.id, full_name: "", monthly_goal_hours: 50, service_year_start_month: 9 }}
+      profile={profile ?? { id: user.id, full_name: "", monthly_goal_hours: 50, service_year_start_month: 9, onboarding_completed: false }}
     />
   );
 }

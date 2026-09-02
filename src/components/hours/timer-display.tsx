@@ -11,20 +11,20 @@ interface TimerDisplayProps {
 
 export function TimerDisplay({ elapsed, state }: TimerDisplayProps) {
   return (
-    <div className="flex flex-col items-center py-8">
+    <div className="flex flex-col items-center py-2">
       <div
         className={cn(
-          "font-display font-semibold text-[4rem] leading-none tabular-nums tracking-tight",
+          "font-display font-semibold text-5xl leading-none tabular-nums tracking-tight",
           "transition-colors duration-300",
           state === "running" ? "text-[var(--primary)]" :
           state === "paused"  ? "text-[var(--ink-muted)]" :
           state === "finished"? "text-[var(--accent)]" :
-          "text-[var(--border)]"
+          "text-[var(--ink)] opacity-70"
         )}
       >
         {formatTimerSeconds(elapsed)}
       </div>
-      <div className="mt-2 text-caption text-[var(--ink-muted)]">
+      <div className="mt-1 text-caption text-[var(--ink-muted)]">
         {state === "idle"     && "Pronto para começar"}
         {state === "running"  && "Pregação em andamento…"}
         {state === "paused"   && "Pausado"}
@@ -33,7 +33,7 @@ export function TimerDisplay({ elapsed, state }: TimerDisplayProps) {
 
       {/* Pulsing indicator */}
       {state === "running" && (
-        <div className="mt-3 flex items-center gap-1.5">
+        <div className="mt-2 flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-[var(--success)] animate-pulse" />
           <span className="text-caption text-[var(--success)]">Ativo</span>
         </div>

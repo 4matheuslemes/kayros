@@ -49,6 +49,7 @@ export interface Profile {
   monthly_goal_hours: number;
   service_year_start_month: number;
   working_days?: number[];
+  onboarding_completed: boolean;
 }
 
 export type SyncOperation = "INSERT" | "UPDATE" | "DELETE";

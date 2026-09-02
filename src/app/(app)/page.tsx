@@ -27,6 +27,7 @@ export default async function DashboardPage() {
         full_name: user.email ?? "Usuário",
         monthly_goal_hours: 50,
         service_year_start_month: 9,
+        onboarding_completed: false,
       }}
     />
   );

@@ -15,6 +15,7 @@ import { createClient } from "@/lib/supabase/client";
 import { APP_NAME } from "@/lib/constants";
 import { getDb, type Profile } from "@/lib/db/dexie";
 import Link from "next/link";
+import { SecuritySettings } from "@/components/security/security-settings";
 
 const DAYS_OF_WEEK = [
   { id: 1, label: "SG" },
@@ -149,7 +150,7 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
               Programação
             </label>
             
-            <div className="flex justify-between items-center gap-1">
+            <div className="flex flex-wrap justify-center gap-1.5">
               {DAYS_OF_WEEK.map((day) => {
                 const currentDays = watch("working_days") || [];
                 const isSelected = currentDays.includes(day.id);
@@ -169,7 +170,7 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
                         setValue("working_days", [...currentDays, day.id].sort(), { shouldValidate: true, shouldDirty: true });
                       }
                     }}
-                    className={`w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-full text-[11px] font-sans font-semibold transition-all ${
+                    className={`w-9 h-9 sm:w-10 sm:h-10 flex-shrink-0 flex items-center justify-center rounded-full text-[11px] font-sans font-semibold transition-all ${
                       isSelected
                         ? "bg-[var(--primary)] text-white shadow-sm"
                         : "bg-[var(--surface)] border border-[var(--border)] text-[var(--ink-muted)] hover:bg-[var(--background)]"
@@ -227,6 +228,9 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
           )}
         </form>
       </Card>
+
+      {/* Security */}
+      <SecuritySettings />
 
       {/* Quick links */}
       <Card padding="none" className="overflow-hidden divide-y divide-[var(--border)]">

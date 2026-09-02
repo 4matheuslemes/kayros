@@ -33,5 +33,14 @@ export default function manifest(): MetadataRoute.Manifest {
       },
     ],
     categories: ["productivity", "lifestyle"],
+    shortcuts: [
+      {
+        name: "Iniciar pregação",
+        short_name: "Iniciar",
+        description: "Inicia o cronômetro de pregação imediatamente",
+        url: "/?quickstart=1",
+        icons: [{ src: "/icon-192x192.png", sizes: "192x192" }],
+      },
+    ],
   };
 }

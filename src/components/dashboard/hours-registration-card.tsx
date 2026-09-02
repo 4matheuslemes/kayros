@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TimerDisplay } from "@/components/hours/timer-display";
 import { TimerControls } from "@/components/hours/timer-controls";
@@ -16,9 +17,20 @@ interface HoursRegistrationCardProps {
 }
 
 export function HoursRegistrationCard({ userId, onRecordSaved }: HoursRegistrationCardProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [tab, setTab] = useState<"timer" | "manual">("timer");
   const { timerState, elapsed, elapsedMinutes, start, pause, resume, finish, reset } = useTimer();
+  const startedRef = useRef(false);
+
+  useEffect(() => {
+    if (searchParams?.get("quickstart") === "1" && timerState === "idle" && !startedRef.current) {
+      startedRef.current = true;
+      start();
+      router.replace("/");
+    }
+  }, [searchParams, timerState, start, router]);
 
   const handleFinish = () => {
     finish();
@@ -33,7 +45,7 @@ export function HoursRegistrationCard({ userId, onRecordSaved }: HoursRegistrati
   return (
     <>
       <Card className="overflow-hidden">
-        <CardHeader className="pb-3 mb-2">
+        <CardHeader className="pb-2 mb-0 pt-4 px-4">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Clock size={18} className="text-[var(--primary)]" />
@@ -44,15 +56,14 @@ export function HoursRegistrationCard({ userId, onRecordSaved }: HoursRegistrati
 
         <div className="px-4 pb-4">
           <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="w-full">
-            <TabsList className="w-full mb-4">
+            <TabsList className="w-full mb-2">
               <TabsTrigger value="timer" className="flex-1">Cronômetro</TabsTrigger>
               <TabsTrigger value="manual" className="flex-1">Manual</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="timer" className="flex flex-col items-center gap-4 mt-0">
-              <div className="py-2">
-                <TimerDisplay elapsed={elapsed} state={timerState} />
-              </div>
+            <TabsContent value="timer" className="flex flex-col items-center gap-2 mt-0">
+              <TimerDisplay elapsed={elapsed} state={timerState} />
+              
               <TimerControls
                 state={timerState}
                 onStart={start}
@@ -63,7 +74,7 @@ export function HoursRegistrationCard({ userId, onRecordSaved }: HoursRegistrati
               />
             </TabsContent>
 
-            <TabsContent value="manual" className="mt-0">
+            <TabsContent value="manual" className="mt-0 pt-2">
               <ManualEntryForm 
                 userId={userId} 
                 onSaved={() => {

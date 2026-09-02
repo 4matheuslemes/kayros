@@ -1,13 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { PerfilClient } from "./perfil-client";
+import { OnboardingClient } from "./onboarding-client";
 
-export const metadata: Metadata = { title: "Perfil" };
+export const metadata: Metadata = { title: "Bem-vindo" };
 
-export default async function PerfilPage() {
+export default async function OnboardingPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+
   if (!user) redirect("/login");
 
   const { data: profile } = await supabase
@@ -16,11 +17,14 @@ export default async function PerfilPage() {
     .eq("id", user.id)
     .single();
 
+  if (profile?.onboarding_completed) {
+    redirect("/");
+  }
+
   return (
-    <PerfilClient
+    <OnboardingClient
       userId={user.id}
-      email={user.email ?? ""}
-      profile={profile ?? { id: user.id, full_name: "", monthly_goal_hours: 50, service_year_start_month: 9, onboarding_completed: false }}
+      initialName={profile?.full_name || user.user_metadata?.full_name || user.email || ""}
     />
   );
 }

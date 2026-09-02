@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
-import { BookOpen } from "lucide-react";
+import Image from "next/image";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { APP_NAME } from "@/lib/constants";
@@ -48,11 +48,16 @@ export default function LoginPage() {
   return (
     <div className="w-full max-w-sm">
       {/* Logo area */}
-      <div className="text-center mb-10">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[var(--primary)] mb-5 shadow-card">
-          <BookOpen size={28} className="text-white" />
-        </div>
-        <h1 className="font-display font-semibold text-2xl text-[var(--ink)]">
+      <div className="text-center mb-10 flex flex-col items-center">
+        <Image
+          src="/kairos-mark-transparent.svg"
+          alt="Kairós"
+          width={80}
+          height={80}
+          className="mb-4"
+          priority
+        />
+        <h1 className="font-display font-semibold text-3xl text-[var(--ink)]">
           {APP_NAME}
         </h1>
         <p className="text-caption text-[var(--ink-muted)] mt-1">

@@ -22,7 +22,7 @@ export function TimerControls({
   onReset,
 }: TimerControlsProps) {
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className="flex flex-col items-center gap-2 w-full">
       {state === "idle" && (
         <Button
           variant="primary"

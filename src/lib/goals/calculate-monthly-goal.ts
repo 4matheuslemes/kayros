@@ -1,4 +1,4 @@
-import { endOfMonth, isAfter, startOfDay, getDay } from "date-fns";
+import { endOfMonth, isAfter, startOfDay, getDay, startOfMonth } from "date-fns";
 
 export interface MonthlyGoalCalculation {
   hoursGoal: number;
@@ -7,6 +7,10 @@ export interface MonthlyGoalCalculation {
   scheduledDaysRemaining: number;
   idealHoursPerScheduledDay: number;
   status: "on_track" | "tight" | "impossible";
+  totalScheduledDaysInMonth: number;
+  scheduledDaysElapsed: number;
+  expectedHoursByToday: number;
+  paceStatus: "ahead" | "on_pace" | "behind";
 }
 
 /**
@@ -29,18 +33,25 @@ export function calculateMonthlyGoal({
   workingDays: number[];
 }): MonthlyGoalCalculation {
   const current = startOfDay(today);
+  const start = startOfMonth(current);
   const end = endOfMonth(current);
 
   let scheduledDaysRemaining = 0;
+  let totalScheduledDaysInMonth = 0;
+  let scheduledDaysElapsed = 0;
   
-  // Count how many days from 'current' to 'end' fall into 'workingDays'
-  const iter = new Date(current);
-  while (!isAfter(iter, end)) {
-    const isoDay = jsDayToIso(getDay(iter));
+  const iterAll = new Date(start);
+  while (!isAfter(iterAll, end)) {
+    const isoDay = jsDayToIso(getDay(iterAll));
     if (workingDays.includes(isoDay)) {
-      scheduledDaysRemaining++;
+      totalScheduledDaysInMonth++;
+      if (iterAll.getTime() < current.getTime()) {
+        scheduledDaysElapsed++;
+      } else {
+        scheduledDaysRemaining++;
+      }
     }
-    iter.setDate(iter.getDate() + 1);
+    iterAll.setDate(iterAll.getDate() + 1);
   }
 
   const hoursRemaining = Math.max(0, hoursGoal - hoursDone);
@@ -59,6 +70,19 @@ export function calculateMonthlyGoal({
     status = "on_track";
   }
 
+  const expectedHoursByToday = totalScheduledDaysInMonth > 0 
+    ? hoursGoal * (scheduledDaysElapsed / totalScheduledDaysInMonth)
+    : 0;
+
+  let paceStatus: "ahead" | "on_pace" | "behind" = "on_pace";
+  if (totalScheduledDaysInMonth > 0) {
+    if (hoursDone >= expectedHoursByToday + 1) {
+      paceStatus = "ahead";
+    } else if (hoursDone <= expectedHoursByToday - 1) {
+      paceStatus = "behind";
+    }
+  }
+
   return {
     hoursGoal,
     hoursDone,
@@ -66,5 +90,9 @@ export function calculateMonthlyGoal({
     scheduledDaysRemaining,
     idealHoursPerScheduledDay,
     status,
+    totalScheduledDaysInMonth,
+    scheduledDaysElapsed,
+    expectedHoursByToday,
+    paceStatus,
   };
 }

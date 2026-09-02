@@ -11,6 +11,8 @@ interface ProgressBarProps extends React.HTMLAttributes<HTMLDivElement> {
   size?: "sm" | "md" | "lg";
   /** Uses accent color when goal is met */
   goalMet?: boolean;
+  /** Custom status color */
+  status?: "on_track" | "tight" | "impossible";
 }
 
 const sizeMap = {
@@ -28,10 +30,19 @@ export function ProgressBar({
   showLabel = false,
   size = "md",
   goalMet = false,
+  status,
   className,
   ...props
 }: ProgressBarProps) {
   const clamped = Math.min(100, Math.max(0, value));
+  
+  const fillColor = status === "impossible" 
+    ? "bg-red-500" 
+    : status === "tight" 
+      ? "bg-[var(--accent)]" 
+      : status === "on_track"
+        ? "bg-[var(--success)]"
+        : goalMet ? "bg-[var(--success)]" : "bg-[var(--primary)]";
 
   return (
     <div className={cn("w-full", className)} {...props}>
@@ -41,7 +52,7 @@ export function ProgressBar({
           <span
             className={cn(
               "text-sm font-semibold font-sans",
-              goalMet ? "text-[var(--accent)]" : "text-[var(--ink)]"
+              goalMet ? "text-[var(--success)]" : "text-[var(--ink)]"
             )}
           >
             {clamped.toFixed(0)}%
@@ -61,7 +72,7 @@ export function ProgressBar({
         <div
           className={cn(
             "h-full rounded-full transition-none",
-            goalMet ? "bg-[var(--accent)]" : "bg-[var(--primary)]",
+            fillColor,
             // Animation driven by CSS custom property
             "animate-[progress-fill_0.8s_ease-out_forwards]"
           )}
