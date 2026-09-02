@@ -36,8 +36,3 @@ export const ACTIVITY_SOURCE = {
 
 export type ActivitySource =
   (typeof ACTIVITY_SOURCE)[keyof typeof ACTIVITY_SOURCE];
-
-export const LETTER_MEETING_LINK = "https://us04web.zoom.us/j/2430022333?pwd=b0hXNXFqUy9qQ0kvZXIyQ0tFSXFpUT09";
-
-export const LETTER_MEETING_MESSAGE = (link: string) =>
-  `Olá! 😊 Que tal escrevermos algumas cartas juntos? Entra na nossa videochamada quando puder:\n${link}`;

@@ -50,7 +50,7 @@ export function DashboardClient({ userId, profile }: DashboardClientProps) {
         workingDays={profile.working_days ?? [1, 2, 3, 4, 5, 6, 7]}
       />
 
-      <LetterMeetingShortcut />
+      <LetterMeetingShortcut meetingLink={profile.meeting_link} />
 
       <MonthSummaryCard
         totalMinutes={totalMinutes}

@@ -32,6 +32,12 @@ const schema = z.object({
   congregation_name:      z.string().optional(),
   monthly_goal_hours:     z.coerce.number().int().min(1).max(300),
   working_days:           z.array(z.number()).min(1, "Selecione ao menos um dia"),
+  meeting_link:           z
+    .string()
+    .trim()
+    .url("Insira o link completo (começando com http ou https), não apenas o número do ID")
+    .or(z.literal(""))
+    .optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -55,6 +61,7 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
       congregation_name:  profile.congregation_name ?? "",
       monthly_goal_hours: profile.monthly_goal_hours,
       working_days:       profile.working_days ?? [1, 2, 3, 4, 5, 6, 7],
+      meeting_link:       profile.meeting_link ?? "",
     },
   });
 
@@ -68,6 +75,7 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
       monthly_goal_hours:  data.monthly_goal_hours,
       service_year_start_month: profile.service_year_start_month,
       working_days:        data.working_days,
+      meeting_link:        data.meeting_link ?? null,
     });
     if (error) {
       toast.error("Erro ao salvar. Tente novamente.");
@@ -79,6 +87,7 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
         congregation_name: data.congregation_name ?? undefined,
         monthly_goal_hours: data.monthly_goal_hours,
         working_days: data.working_days,
+        meeting_link: data.meeting_link ?? undefined,
       });
       // Reset form to clear isDirty state with new values
       reset(data);
@@ -141,6 +150,22 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
               error={!!errors.monthly_goal_hours}
               disabled={!isEditing}
               {...register("monthly_goal_hours")}
+            />
+          </Field>
+
+          <Field
+            label="Link da minha sala de reunião"
+            htmlFor="profile-meeting"
+            hint="Pegue no app do Zoom: Reuniões → Sala Pessoal → Copiar Convite"
+            error={errors.meeting_link?.message}
+          >
+            <Input
+              id="profile-meeting"
+              type="url"
+              placeholder="https://zoom.us/j/..."
+              error={!!errors.meeting_link}
+              disabled={!isEditing}
+              {...register("meeting_link")}
             />
           </Field>
 
@@ -241,6 +266,15 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
           <FileText size={16} className="text-[var(--ink-muted)]" />
           Relatório do mês
         </Link>
+        {profile.is_admin && (
+          <Link
+            href="/convidar"
+            className="flex items-center gap-3 px-5 py-4 hover:bg-[var(--background)] transition-colors text-body-sm text-[var(--ink)]"
+          >
+            <User size={16} className="text-[var(--ink-muted)]" />
+            Convidar usuários
+          </Link>
+        )}
       </Card>
 
       {/* App info */}

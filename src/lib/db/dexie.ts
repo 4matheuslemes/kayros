@@ -50,6 +50,8 @@ export interface Profile {
   service_year_start_month: number;
   working_days?: number[];
   onboarding_completed: boolean;
+  meeting_link?: string;
+  is_admin?: boolean;
 }
 
 export type SyncOperation = "INSERT" | "UPDATE" | "DELETE";
