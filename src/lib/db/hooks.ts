@@ -287,3 +287,36 @@ export function useUpcomingVisits(userId: string | undefined, limit = 3) {
 
   return upcoming;
 }
+
+// ─────────────────────────────────────────────────────────────
+// useAllVisits — for calendar
+// ─────────────────────────────────────────────────────────────
+
+export function useAllVisits(userId: string | undefined) {
+  const [visits, setVisits] = useState<(VisitHistory & { contact_name: string })[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const refresh = useCallback(async () => {
+    if (!userId) return;
+    const db = getDb();
+
+    const contacts = await db.contacts.where("user_id").equals(userId).toArray();
+    const contactMap = new Map(contacts.map((c) => [c.id, c.name]));
+
+    const allVisits = await db.visit_history
+      .filter((v) => contactMap.has(v.contact_id))
+      .toArray();
+
+    setVisits(
+      allVisits.map((v) => ({
+        ...v,
+        contact_name: contactMap.get(v.contact_id) ?? "—",
+      }))
+    );
+    setLoading(false);
+  }, [userId]);
+
+  useEffect(() => { void refresh(); }, [refresh]);
+
+  return { visits, loading, refresh };
+}

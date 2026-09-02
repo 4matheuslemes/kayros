@@ -1,4 +1,4 @@
-import { endOfMonth, isAfter, startOfDay, getDay, startOfMonth } from "date-fns";
+import { endOfMonth, isAfter, startOfDay, getDay, startOfMonth, getDaysInMonth, startOfWeek, addDays } from "date-fns";
 
 export interface MonthlyGoalCalculation {
   hoursGoal: number;
@@ -95,4 +95,44 @@ export function calculateMonthlyGoal({
     expectedHoursByToday,
     paceStatus,
   };
+}
+
+export const ISO_DAY_TO_STRING: Record<number, string> = {
+  1: "monday",
+  2: "tuesday",
+  3: "wednesday",
+  4: "thursday",
+  5: "friday",
+  6: "saturday",
+  7: "sunday",
+};
+
+export function calculateProjectedHours(
+  weeklySchedule: Record<string, number> | undefined,
+  workingDays: number[],
+  targetDate: Date = new Date()
+): number {
+  if (!weeklySchedule || Object.keys(weeklySchedule).length === 0) {
+    // If no specific schedule, assume 2 hours (120 mins) per working day as a fallback
+    // Or just 0 if we want to be strict. Let's just fallback to working days * 2h for now
+    // Wait, the new logic requires users to set it. If not set, it's 0.
+  }
+
+  const start = startOfMonth(targetDate);
+  const end = endOfMonth(targetDate);
+  
+  let totalMinutes = 0;
+  
+  const iter = new Date(start);
+  while (!isAfter(iter, end)) {
+    const isoDay = jsDayToIso(getDay(iter));
+    if (workingDays.includes(isoDay)) {
+      const dayKey = ISO_DAY_TO_STRING[isoDay];
+      const minutes = weeklySchedule?.[dayKey] ?? 120; // fallback to 2h if missing
+      totalMinutes += minutes;
+    }
+    iter.setDate(iter.getDate() + 1);
+  }
+  
+  return totalMinutes / 60;
 }

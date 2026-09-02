@@ -16,6 +16,8 @@ import { APP_NAME } from "@/lib/constants";
 import { getDb, type Profile } from "@/lib/db/dexie";
 import Link from "next/link";
 import { SecuritySettings } from "@/components/security/security-settings";
+import { calculateProjectedHours, ISO_DAY_TO_STRING } from "@/lib/goals/calculate-monthly-goal";
+import { formatHours } from "@/lib/format";
 
 const DAYS_OF_WEEK = [
   { id: 1, label: "SG" },
@@ -38,6 +40,7 @@ const schema = z.object({
     .url("Insira o link completo (começando com http ou https), não apenas o número do ID")
     .or(z.literal(""))
     .optional(),
+  weekly_schedule:        z.record(z.string(), z.number()).optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -61,9 +64,21 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
       congregation_name:  profile.congregation_name ?? "",
       monthly_goal_hours: profile.monthly_goal_hours,
       working_days:       profile.working_days ?? [1, 2, 3, 4, 5, 6, 7],
+      weekly_schedule:    profile.weekly_schedule ?? {},
       meeting_link:       profile.meeting_link ?? "",
     },
   });
+
+  const currentDays = watch("working_days") || [];
+  const weeklySchedule = watch("weekly_schedule") || {};
+  const goalHours = watch("monthly_goal_hours") || 50;
+
+  const projectedHours = calculateProjectedHours(weeklySchedule, currentDays);
+  const diff = projectedHours - goalHours;
+  const projectedText = diff >= 0 
+    ? `Seguindo essa agenda, você fará ${formatHours(projectedHours)} neste mês (Meta atingida!)`
+    : `Seguindo essa agenda, você fará ${formatHours(projectedHours)} neste mês (Faltam ${formatHours(Math.abs(diff))} para sua meta de ${formatHours(goalHours)}).`;
+  const projectedColor = diff >= 0 ? "text-[var(--success)]" : "text-[var(--accent)]";
 
   const onSubmit = async (data: FormData) => {
     setSaving(true);
@@ -75,6 +90,7 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
       monthly_goal_hours:  data.monthly_goal_hours,
       service_year_start_month: profile.service_year_start_month,
       working_days:        data.working_days,
+      weekly_schedule:     data.weekly_schedule,
       meeting_link:        data.meeting_link ?? null,
     });
     if (error) {
@@ -87,6 +103,7 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
         congregation_name: data.congregation_name ?? undefined,
         monthly_goal_hours: data.monthly_goal_hours,
         working_days: data.working_days,
+        weekly_schedule: data.weekly_schedule,
         meeting_link: data.meeting_link ?? undefined,
       });
       // Reset form to clear isDirty state with new values
@@ -177,7 +194,6 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
             
             <div className="flex flex-wrap justify-center gap-1.5">
               {DAYS_OF_WEEK.map((day) => {
-                const currentDays = watch("working_days") || [];
                 const isSelected = currentDays.includes(day.id);
                 return (
                   <button
@@ -193,6 +209,9 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
                         }
                       } else {
                         setValue("working_days", [...currentDays, day.id].sort(), { shouldValidate: true, shouldDirty: true });
+                        // Set default hours when enabling
+                        const key = ISO_DAY_TO_STRING[day.id];
+                        setValue(`weekly_schedule.${key}`, 120, { shouldDirty: true });
                       }
                     }}
                     className={`w-9 h-9 sm:w-10 sm:h-10 flex-shrink-0 flex items-center justify-center rounded-full text-[11px] font-sans font-semibold transition-all ${
@@ -206,9 +225,50 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
                 );
               })}
             </div>
+
+            {currentDays.length > 0 && (
+              <div className="mt-4 flex flex-col gap-3">
+                {currentDays.map(dayId => {
+                  const day = DAYS_OF_WEEK.find(d => d.id === dayId)!;
+                  const key = ISO_DAY_TO_STRING[dayId];
+                  const currentMins = weeklySchedule[key] ?? 120;
+                  
+                  return (
+                    <div key={dayId} className="flex items-center justify-between bg-[var(--surface)] p-3 rounded-lg border border-[var(--border)]">
+                      <span className="text-body-sm font-semibold">{day.label}</span>
+                      <div className="flex items-center gap-3">
+                        <Button 
+                          type="button" 
+                          variant="secondary" 
+                          size="icon" 
+                          className="w-8 h-8 rounded-full"
+                          disabled={!isEditing || currentMins <= 30}
+                          onClick={() => setValue(`weekly_schedule.${key}`, Math.max(0, currentMins - 30), { shouldDirty: true })}
+                        >
+                          -
+                        </Button>
+                        <span className="font-display font-medium w-16 text-center text-[var(--ink)]">
+                          {formatHours(currentMins / 60)}
+                        </span>
+                        <Button 
+                          type="button" 
+                          variant="secondary" 
+                          size="icon" 
+                          className="w-8 h-8 rounded-full"
+                          disabled={!isEditing}
+                          onClick={() => setValue(`weekly_schedule.${key}`, currentMins + 30, { shouldDirty: true })}
+                        >
+                          +
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
             
-            <p className="text-caption text-[var(--ink-muted)] mt-3">
-              Os dias selecionados são usados para prever a viabilidade da sua meta mensal.
+            <p className={`text-sm mt-3 p-3 rounded-md bg-[var(--surface)] font-medium text-center ${projectedColor}`}>
+              {projectedText}
             </p>
           </div>
 

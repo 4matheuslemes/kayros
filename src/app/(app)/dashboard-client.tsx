@@ -2,12 +2,12 @@
 
 import { AppHeader } from "@/components/layout/app-header";
 import { MonthlyGoalCard } from "@/components/dashboard/monthly-goal-card";
-import { MonthSummaryCard } from "@/components/dashboard/month-summary-card";
-import { UpcomingVisitsCard } from "@/components/dashboard/upcoming-visits-card";
 import { ActivityBreakdownCard } from "@/components/dashboard/activity-breakdown-card";
 import { AnnualChart } from "@/components/dashboard/annual-chart";
 import { HoursRegistrationCard } from "@/components/dashboard/hours-registration-card";
 import { LetterMeetingShortcut } from "@/components/dashboard/letter-meeting-shortcut";
+import { AgendaCalendar } from "@/components/dashboard/agenda-calendar";
+import { ReleaseNotesModal } from "@/components/dashboard/release-notes-modal";
 import { useMonthRecords, useDailyRecords, useContacts, useUpcomingVisits } from "@/lib/db/hooks";
 import type { Profile } from "@/lib/db/dexie";
 
@@ -36,6 +36,8 @@ export function DashboardClient({ userId, profile }: DashboardClientProps) {
         subtitle={profile.congregation_name ?? undefined}
       />
 
+      <ReleaseNotesModal />
+
       <HoursRegistrationCard 
         userId={userId} 
         onRecordSaved={() => {
@@ -52,13 +54,7 @@ export function DashboardClient({ userId, profile }: DashboardClientProps) {
 
       <LetterMeetingShortcut meetingLink={profile.meeting_link} />
 
-      <MonthSummaryCard
-        totalMinutes={totalMinutes}
-        revisitas={revisitas}
-        estudosAtivos={estudosAtivos}
-      />
-
-      <UpcomingVisitsCard visits={upcoming} />
+      <AgendaCalendar userId={userId} profile={profile} />
 
       <ActivityBreakdownCard records={records.filter(r => r.date.startsWith(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`))} />
 

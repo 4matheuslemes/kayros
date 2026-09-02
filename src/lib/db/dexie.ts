@@ -52,6 +52,7 @@ export interface Profile {
   onboarding_completed: boolean;
   meeting_link?: string;
   is_admin?: boolean;
+  weekly_schedule?: Record<string, number>;
 }
 
 export type SyncOperation = "INSERT" | "UPDATE" | "DELETE";
