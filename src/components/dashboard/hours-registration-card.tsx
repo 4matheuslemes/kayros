@@ -45,18 +45,16 @@ export function HoursRegistrationCard({ userId, onRecordSaved }: HoursRegistrati
   return (
     <>
       <Card className="overflow-hidden">
-        <CardHeader className="pb-2 mb-0 pt-4 px-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Clock size={18} className="text-[var(--primary)]" />
-              Registrar Horas
-            </CardTitle>
-          </div>
+        <CardHeader className="mb-3">
+          <CardTitle className="flex items-center gap-2">
+            <Clock size={18} className="text-[var(--primary)]" />
+            Registrar Horas
+          </CardTitle>
         </CardHeader>
 
-        <div className="px-4 pb-4">
+        <div className="w-full">
           <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="w-full">
-            <TabsList className="w-full mb-2">
+            <TabsList className="w-full mb-4">
               <TabsTrigger value="timer" className="flex-1">Cronômetro</TabsTrigger>
               <TabsTrigger value="manual" className="flex-1">Manual</TabsTrigger>
             </TabsList>

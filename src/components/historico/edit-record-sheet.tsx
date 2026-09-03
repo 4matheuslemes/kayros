@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
+import { Trash2 } from "lucide-react";
 import { Drawer } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea, Field, Select } from "@/components/ui/input";
@@ -30,6 +31,7 @@ interface EditRecordSheetProps {
   onClose: () => void;
   record: DailyRecord | null;
   onSaved?: () => void;
+  onDeleteRequest?: (id: string) => void;
 }
 
 export function EditRecordSheet({
@@ -37,6 +39,7 @@ export function EditRecordSheet({
   onClose,
   record,
   onSaved,
+  onDeleteRequest,
 }: EditRecordSheetProps) {
   const [saving, setSaving] = useState(false);
 
@@ -157,15 +160,31 @@ export function EditRecordSheet({
           />
         </Field>
 
-        <Button
-          type="submit"
-          variant="primary"
-          size="lg"
-          loading={saving}
-          className="w-full mt-2"
-        >
-          Salvar alterações
-        </Button>
+        <div className="flex gap-3 mt-2">
+          {onDeleteRequest && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="lg"
+              className="px-4 text-red-500 hover:text-red-600 hover:bg-red-50"
+              onClick={() => {
+                onClose();
+                onDeleteRequest(record.id);
+              }}
+            >
+              <Trash2 size={20} />
+            </Button>
+          )}
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            loading={saving}
+            className="flex-1"
+          >
+            Salvar alterações
+          </Button>
+        </div>
       </form>
     </Drawer>
   );

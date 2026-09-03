@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { Plus, Search, Users, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { v4 as uuidv4 } from "uuid";
@@ -24,13 +25,16 @@ interface ContatosClientProps {
 }
 
 export function ContatosClient({ userId }: ContatosClientProps) {
+  const searchParams = useSearchParams();
+  const initialFilter = (searchParams.get("status") as ContactStatus) || "todos";
+
   const { contacts, loading, refresh } = useContacts(userId);
   const [newOpen, setNewOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [deletingContactId, setDeletingContactId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<"todos" | ContactStatus>("todos");
+  const [filter, setFilter] = useState<"todos" | ContactStatus>(initialFilter);
 
   const filtered = useMemo(() => {
     return contacts

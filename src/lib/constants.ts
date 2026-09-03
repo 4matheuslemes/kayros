@@ -19,6 +19,13 @@ export const ACTIVITY_CATEGORIES = [
   { value: "carta", label: "Carta" },
 ] as const;
 
+export const ACTIVITY_COLORS: Record<string, string> = {
+  "convencional": "bg-blue-500",
+  "testemunho_publico": "bg-emerald-500",
+  "ldc": "bg-amber-500",
+  "carta": "bg-purple-500",
+};
+
 export type ActivityCategory =
   (typeof ACTIVITY_CATEGORIES)[number]["value"];
 

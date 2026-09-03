@@ -1,9 +1,9 @@
 "use client";
 
+import Link from "next/link";
+
 import { AppHeader } from "@/components/layout/app-header";
 import { MonthlyGoalCard } from "@/components/dashboard/monthly-goal-card";
-import { ActivityBreakdownCard } from "@/components/dashboard/activity-breakdown-card";
-import { AnnualChart } from "@/components/dashboard/annual-chart";
 import { HoursRegistrationCard } from "@/components/dashboard/hours-registration-card";
 import { LetterMeetingShortcut } from "@/components/dashboard/letter-meeting-shortcut";
 import { AgendaCalendar } from "@/components/dashboard/agenda-calendar";
@@ -36,6 +36,23 @@ export function DashboardClient({ userId, profile }: DashboardClientProps) {
         subtitle={profile.congregation_name ?? undefined}
       />
 
+      <div className="flex gap-2 -mt-2">
+        <Link 
+          href="/contatos?status=revisita" 
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] text-xs font-semibold hover:bg-[var(--primary)]/20 transition-colors"
+        >
+          <span className="w-2 h-2 rounded-full bg-[var(--primary)]"></span>
+          {revisitas} {revisitas === 1 ? 'revisita' : 'revisitas'}
+        </Link>
+        <Link 
+          href="/contatos?status=estudo_ativo" 
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--success)]/10 text-[var(--success)] text-xs font-semibold hover:bg-[var(--success)]/20 transition-colors"
+        >
+          <span className="w-2 h-2 rounded-full bg-[var(--success)]"></span>
+          {estudosAtivos} {estudosAtivos === 1 ? 'estudo' : 'estudos'}
+        </Link>
+      </div>
+
       <ReleaseNotesModal />
 
       <HoursRegistrationCard 
@@ -52,16 +69,9 @@ export function DashboardClient({ userId, profile }: DashboardClientProps) {
         workingDays={profile.working_days ?? [1, 2, 3, 4, 5, 6, 7]}
       />
 
-      <LetterMeetingShortcut meetingLink={profile.meeting_link} />
-
       <AgendaCalendar userId={userId} profile={profile} />
 
-      <ActivityBreakdownCard records={records.filter(r => r.date.startsWith(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`))} />
-
-      <AnnualChart
-        records={records}
-        goalHours={profile.monthly_goal_hours}
-      />
+      <LetterMeetingShortcut meetingLink={profile.meeting_link} />
     </div>
   );
 }

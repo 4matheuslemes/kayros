@@ -2,9 +2,9 @@
 
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart } from "lucide-react";
-import { ACTIVITY_CATEGORIES } from "@/lib/constants";
+import { ACTIVITY_CATEGORIES, ACTIVITY_COLORS } from "@/lib/constants";
 import type { DailyRecord } from "@/lib/db/dexie";
-import { formatDuration } from "@/lib/utils";
+import { formatDuration, cn } from "@/lib/utils";
 
 interface ActivityBreakdownCardProps {
   records: DailyRecord[];
@@ -62,7 +62,7 @@ export function ActivityBreakdownCard({ records }: ActivityBreakdownCardProps) {
                 {/* Mini progress bar */}
                 <div className="h-1.5 w-full bg-[var(--background)] rounded-full overflow-hidden">
                   <div 
-                    className="h-full bg-[var(--accent)] rounded-full transition-all duration-500 ease-out" 
+                    className={cn("h-full rounded-full transition-all duration-500 ease-out", ACTIVITY_COLORS[cat.value] || "bg-[var(--accent)]")} 
                     style={{ width: `${percentage}%` }}
                   />
                 </div>

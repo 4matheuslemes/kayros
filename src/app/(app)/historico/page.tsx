@@ -11,6 +11,11 @@ export default async function HistoricoPage() {
 
   if (!user) redirect("/login");
 
-  return <HistoricoClient userId={user.id} />;
-}
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
 
+  return <HistoricoClient userId={user.id} profile={profile} />;
+}
