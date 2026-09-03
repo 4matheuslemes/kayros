@@ -38,13 +38,7 @@ export async function POST(req: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // First check if user exists to provide a friendly error
-    const { data: existingUser } = await serverSupabase
-      .from("profiles")
-      .select("id")
-      .eq("id", email) // Wait, we can't search by email in profiles easily unless we have an email column or we query auth.users via admin.
-      // Actually, generateLink will fail if the email is already registered. We can catch the specific error.
-      .limit(1);
+    // generateLink will fail if the email is already registered, so we handle that error below.
 
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
       type: "invite",

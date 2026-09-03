@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { LogOut, User, FileText, CalendarDays } from "lucide-react";
+import { LogOut, User, FileText, CalendarDays, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/app-header";
-import { Card } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Field } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
@@ -16,6 +16,7 @@ import { APP_NAME } from "@/lib/constants";
 import { getDb, type Profile } from "@/lib/db/dexie";
 import Link from "next/link";
 import { SecuritySettings } from "@/components/security/security-settings";
+import { ThemeSwitch } from "@/components/layout/theme-toggle";
 import { calculateProjectedHours, ISO_DAY_TO_STRING } from "@/lib/goals/calculate-monthly-goal";
 import { formatHours } from "@/lib/format";
 
@@ -55,7 +56,7 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  const [editSection, setEditSection] = useState<"personal" | "schedule" | null>(null);
 
   const { register, handleSubmit, watch, setValue, reset, formState: { errors, isDirty } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -108,7 +109,7 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
       });
       // Reset form to clear isDirty state with new values
       reset(data);
-      setIsEditing(false);
+      setEditSection(null);
     }
     setSaving(false);
   };
@@ -125,20 +126,22 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
     <div className="flex flex-col gap-5">
       <AppHeader title="Perfil" subtitle={email} />
 
-      {/* Profile form */}
-      <Card>
-        <div className="flex items-center gap-2 mb-5">
-          <User size={16} className="text-[var(--primary)]" />
-          <h2 className="text-subheading text-[var(--ink)]">Perfil</h2>
-        </div>
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5" noValidate>
+        {/* Personal Info Card */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-1.5 px-1">
+            <User size={14} className="text-[var(--ink-muted)]" />
+            <h2 className="text-caption font-semibold uppercase tracking-wider text-[var(--ink-muted)]">Informações Pessoais</h2>
+          </div>
+          <Card>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5" noValidate>
+          <div className="flex flex-col gap-5">
           <Field label="Nome completo" htmlFor="profile-name" error={errors.full_name?.message} required>
             <Input
               id="profile-name"
               placeholder="João da Silva"
               error={!!errors.full_name}
-              disabled={!isEditing}
+              disabled={editSection !== "personal"}
               {...register("full_name")}
             />
           </Field>
@@ -147,26 +150,8 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
             <Input
               id="profile-congregation"
               placeholder="Congregação Central"
-              disabled={!isEditing}
+              disabled={editSection !== "personal"}
               {...register("congregation_name")}
-            />
-          </Field>
-
-          <Field
-            label="Meta mensal de horas"
-            htmlFor="profile-goal"
-            error={errors.monthly_goal_hours?.message}
-            hint="Padrão: 50 horas"
-          >
-            <Input
-              id="profile-goal"
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={300}
-              error={!!errors.monthly_goal_hours}
-              disabled={!isEditing}
-              {...register("monthly_goal_hours")}
             />
           </Field>
 
@@ -181,13 +166,81 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
               type="url"
               placeholder="https://zoom.us/j/..."
               error={!!errors.meeting_link}
-              disabled={!isEditing}
+              disabled={editSection !== "personal"}
               {...register("meeting_link")}
             />
           </Field>
+          </div>
 
-          {/* Schedule */}
-          <div className="pt-4 mt-2 border-t border-[var(--border)] flex flex-col gap-1.5">
+          <div className="pt-2 mt-2">
+            {editSection !== "personal" ? (
+              <Button
+                type="button"
+                variant="secondary"
+                className="w-full"
+                onClick={(e) => {
+                  e.preventDefault();
+                  reset();
+                  setEditSection("personal");
+                }}
+              >
+                Editar informações
+              </Button>
+            ) : (
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="flex-1"
+                  onClick={() => {
+                    reset();
+                    setEditSection(null);
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  loading={saving && editSection === "personal"}
+                  disabled={!isDirty}
+                  className="flex-1"
+                >
+                  Salvar
+                </Button>
+              </div>
+            )}
+          </div>
+        </Card>
+        </div>
+        {/* Schedule Card */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-1.5 px-1">
+            <CalendarDays size={14} className="text-[var(--ink-muted)]" />
+            <h2 className="text-caption font-semibold uppercase tracking-wider text-[var(--ink-muted)]">Metas e Programação</h2>
+          </div>
+          <Card>
+
+          <div className="flex flex-col gap-5">
+            <Field
+              label="Meta mensal de horas"
+              htmlFor="profile-goal"
+              error={errors.monthly_goal_hours?.message}
+              hint="Padrão: 50 horas"
+            >
+              <Input
+                id="profile-goal"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={300}
+                error={!!errors.monthly_goal_hours}
+                disabled={editSection !== "schedule"}
+                {...register("monthly_goal_hours")}
+              />
+            </Field>
+
+            <div className="pt-2 flex flex-col gap-1.5">
             <label className="text-label text-[var(--ink)]">
               Programação
             </label>
@@ -199,7 +252,7 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
                   <button
                     key={day.id}
                     type="button"
-                    disabled={!isEditing}
+                    disabled={editSection !== "schedule"}
                     onClick={() => {
                       if (isSelected) {
                         if (currentDays.length > 1) {
@@ -218,7 +271,7 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
                       isSelected
                         ? "bg-[var(--primary)] text-white shadow-sm"
                         : "bg-[var(--surface)] border border-[var(--border)] text-[var(--ink-muted)] hover:bg-[var(--background)]"
-                    } ${!isEditing && isSelected ? "opacity-80" : ""} disabled:opacity-60 disabled:cursor-not-allowed`}
+                    } ${editSection !== "schedule" && isSelected ? "opacity-80" : ""} disabled:opacity-60 disabled:cursor-not-allowed`}
                   >
                     {day.label}
                   </button>
@@ -242,7 +295,7 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
                           variant="secondary" 
                           size="icon" 
                           className="w-8 h-8 rounded-full"
-                          disabled={!isEditing || currentMins <= 30}
+                          disabled={editSection !== "schedule" || currentMins <= 30}
                           onClick={() => setValue(`weekly_schedule.${key}`, Math.max(0, currentMins - 30), { shouldDirty: true })}
                         >
                           -
@@ -255,7 +308,7 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
                           variant="secondary" 
                           size="icon" 
                           className="w-8 h-8 rounded-full"
-                          disabled={!isEditing}
+                          disabled={editSection !== "schedule"}
                           onClick={() => setValue(`weekly_schedule.${key}`, currentMins + 30, { shouldDirty: true })}
                         >
                           +
@@ -271,71 +324,85 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
               {projectedText}
             </p>
           </div>
-
-          {!isEditing ? (
-            <Button
-              type="button"
-              variant="secondary"
-              size="lg"
-              className="w-full mt-2"
-              onClick={(e) => {
-                e.preventDefault();
-                setIsEditing(true);
-              }}
-            >
-              Editar
-            </Button>
-          ) : (
-            <div className="flex gap-3 mt-2">
+          </div>
+          <div className="pt-2 mt-2">
+            {editSection !== "schedule" ? (
               <Button
                 type="button"
                 variant="secondary"
-                size="lg"
-                className="flex-1"
-                onClick={() => {
+                className="w-full"
+                onClick={(e) => {
+                  e.preventDefault();
                   reset();
-                  setIsEditing(false);
+                  setEditSection("schedule");
                 }}
               >
-                Cancelar
+                Editar programação
               </Button>
-              <Button
-                type="submit"
-                variant="primary"
-                size="lg"
-                loading={saving}
-                disabled={!isDirty}
-                className="flex-1"
-              >
-                Salvar
-              </Button>
-            </div>
-          )}
-        </form>
-      </Card>
+            ) : (
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="flex-1"
+                  onClick={() => {
+                    reset();
+                    setEditSection(null);
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  loading={saving && editSection === "schedule"}
+                  disabled={!isDirty}
+                  className="flex-1"
+                >
+                  Salvar
+                </Button>
+              </div>
+            )}
+          </div>
+        </Card>
+        </div>
+      </form>
 
-      {/* Security */}
-      <SecuritySettings />
-
-      {/* Quick links */}
-      <Card padding="none" className="overflow-hidden divide-y divide-[var(--border)]">
-        <Link
-          href="/relatorio"
-          className="flex items-center gap-3 px-5 py-4 hover:bg-[var(--background)] transition-colors text-body-sm text-[var(--ink)]"
-        >
-          <FileText size={16} className="text-[var(--ink-muted)]" />
-          Relatório do mês
-        </Link>
-        {profile.is_admin && (
+      {/* Settings & Quick Links */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-1.5 px-1">
+          <Settings size={14} className="text-[var(--ink-muted)]" />
+          <h2 className="text-caption font-semibold uppercase tracking-wider text-[var(--ink-muted)]">Ajustes</h2>
+        </div>
+        <Card padding="none" className="overflow-hidden">
+          <div className="flex flex-col">
+          <ThemeSwitch />
+          <SecuritySettings />
           <Link
-            href="/convidar"
+            href="/relatorio"
             className="flex items-center gap-3 px-5 py-4 hover:bg-[var(--background)] transition-colors text-body-sm text-[var(--ink)]"
           >
-            <User size={16} className="text-[var(--ink-muted)]" />
-            Convidar usuários
+            <FileText size={16} className="text-[var(--ink-muted)]" />
+            <div className="text-left">
+              <span className="text-body-sm text-[var(--ink)] block leading-tight">Relatório do mês</span>
+              <span className="text-caption text-[var(--ink-muted)] mt-0.5 block">Resumo para enviar</span>
+            </div>
           </Link>
-        )}
+          {profile.is_admin && (
+            <Link
+              href="/convidar"
+              className="flex items-center gap-3 px-5 py-4 hover:bg-[var(--background)] transition-colors text-body-sm text-[var(--ink)]"
+            >
+              <User size={16} className="text-[var(--ink-muted)]" />
+              <div className="text-left">
+                <span className="text-body-sm text-[var(--ink)] block leading-tight">Convidar usuários</span>
+                <span className="text-caption text-[var(--ink-muted)] mt-0.5 block">Gerar link de acesso</span>
+              </div>
+            </Link>
+          )}
+        </div>
       </Card>
+      </div>
 
       {/* App info */}
       <p className="text-center text-caption text-[var(--ink-muted)]">

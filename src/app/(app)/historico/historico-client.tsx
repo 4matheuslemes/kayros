@@ -4,8 +4,7 @@ import { useDailyRecords, useMonthRecords } from "@/lib/db/hooks";
 import { AppHeader } from "@/components/layout/app-header";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import Link from "next/link";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { useState } from "react";
 import { getDb, type DailyRecord } from "@/lib/db/dexie";
 import type { Profile } from "@/lib/db/dexie";
@@ -73,13 +72,6 @@ export function HistoricoClient({ userId, profile }: { userId: string, profile: 
 
   return (
     <div className="flex flex-col gap-4 pb-8">
-      <div className="mb-2">
-        <Link href="/" className="inline-flex items-center gap-1.5 text-body-sm font-medium text-[var(--ink-muted)] hover:text-[var(--ink)] transition-colors">
-          <ArrowLeft size={16} />
-          Voltar para Início
-        </Link>
-      </div>
-      
       <AppHeader
         title="Histórico e Progresso"
         subtitle="Acompanhe suas atividades"

@@ -111,42 +111,39 @@ export function SecuritySettings() {
 
   return (
     <>
-      <Card>
-        <div className="flex items-center gap-2 mb-5">
-          <Shield size={16} className="text-[var(--primary)]" />
-          <h2 className="text-subheading text-[var(--ink)]">Segurança</h2>
-        </div>
-
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-[var(--ink)]">Trava de Acesso (PIN)</p>
-              <p className="text-caption text-[var(--ink-muted)]">Exigir senha ao voltar para o app</p>
-            </div>
-            <button
-              onClick={handleTogglePin}
-              className={`w-11 h-6 rounded-full transition-colors relative ${hasPin ? 'bg-[var(--success)]' : 'bg-[var(--border)]'}`}
-            >
-              <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${hasPin ? 'translate-x-6' : 'translate-x-1'}`} />
-            </button>
+      <div className="flex items-center justify-between px-5 py-4 hover:bg-[var(--background)] transition-colors">
+        <div className="flex items-center gap-3">
+          <Shield size={16} className="text-[var(--ink-muted)]" />
+          <div className="text-left">
+            <span className="text-body-sm text-[var(--ink)] block leading-tight">Trava de Acesso (PIN)</span>
+            <span className="text-caption text-[var(--ink-muted)] mt-0.5 block">Exigir senha ao abrir o app</span>
           </div>
-
-          {hasPin && biometricsAvailable && (
-            <div className="flex items-center justify-between pt-3 border-t border-[var(--border)]">
-              <div>
-                <p className="text-sm font-medium text-[var(--ink)]">Desbloqueio por Biometria</p>
-                <p className="text-caption text-[var(--ink-muted)]">Face ID / Touch ID / Digital</p>
-              </div>
-              <button
-                onClick={handleToggleBiometrics}
-                className={`w-11 h-6 rounded-full transition-colors relative ${hasBiometrics ? 'bg-[var(--success)]' : 'bg-[var(--border)]'}`}
-              >
-                <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${hasBiometrics ? 'translate-x-6' : 'translate-x-1'}`} />
-              </button>
-            </div>
-          )}
         </div>
-      </Card>
+        <button
+          onClick={handleTogglePin}
+          className={`w-11 h-6 rounded-full transition-colors relative shadow-inner ${hasPin ? 'bg-[var(--success)]' : 'bg-[var(--border)]'}`}
+        >
+          <div className={`w-5 h-5 bg-white rounded-full absolute shadow-sm transition-transform duration-200 ease-out ${hasPin ? 'translate-x-5' : 'translate-x-0.5'} top-0.5`} />
+        </button>
+      </div>
+
+      {hasPin && biometricsAvailable && (
+        <div className="flex items-center justify-between px-5 py-4 hover:bg-[var(--background)] transition-colors">
+          <div className="flex items-center gap-3">
+            <Fingerprint size={16} className="text-[var(--ink-muted)]" />
+            <div className="text-left">
+              <span className="text-body-sm text-[var(--ink)] block leading-tight">Biometria</span>
+              <span className="text-caption text-[var(--ink-muted)] mt-0.5 block">Face ID / Touch ID</span>
+            </div>
+          </div>
+          <button
+            onClick={handleToggleBiometrics}
+            className={`w-11 h-6 rounded-full transition-colors relative shadow-inner ${hasBiometrics ? 'bg-[var(--success)]' : 'bg-[var(--border)]'}`}
+          >
+            <div className={`w-5 h-5 bg-white rounded-full absolute shadow-sm transition-transform duration-200 ease-out ${hasBiometrics ? 'translate-x-5' : 'translate-x-0.5'} top-0.5`} />
+          </button>
+        </div>
+      )}
 
       <Dialog open={pinModalOpen} onOpenChange={setPinModalOpen}>
         <DialogContent className="sm:max-w-xs">

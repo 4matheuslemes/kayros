@@ -1,5 +1,4 @@
 import { type ReactNode } from "react";
-import { ThemeToggle } from "./theme-toggle";
 import { cn } from "@/lib/utils";
 
 interface AppHeaderProps {
@@ -28,7 +27,6 @@ export function AppHeader({ title, subtitle, right, className }: AppHeaderProps)
       </div>
       <div className="flex items-center gap-1">
         {right}
-        <ThemeToggle />
       </div>
     </header>
   );
