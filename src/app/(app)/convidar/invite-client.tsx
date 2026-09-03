@@ -36,7 +36,10 @@ export function InviteClient() {
       const res = await fetch("/api/invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: data.email }),
+        body: JSON.stringify({ 
+          email: data.email,
+          origin: window.location.origin
+        }),
       });
 
       const result = await res.json();

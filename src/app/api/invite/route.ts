@@ -25,11 +25,15 @@ export async function POST(req: Request) {
 
     // 3. Parse request
     const body = await req.json();
-    const { email } = body;
+    const { email, origin } = body;
 
     if (!email || typeof email !== "string") {
       return NextResponse.json({ error: "E-mail inválido" }, { status: 400 });
     }
+
+    // Use fallback origin if not provided, though client now always provides it
+    const requestUrl = new URL(req.url);
+    const baseUrl = origin || requestUrl.origin;
 
     // 4. Use Service Role to generate link
     // This MUST use the service role key to bypass RLS and use Admin API
@@ -40,12 +44,11 @@ export async function POST(req: Request) {
 
     // generateLink will fail if the email is already registered, so we handle that error below.
 
-    const requestUrl = new URL(req.url);
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
       type: "invite",
       email: email,
       options: {
-        redirectTo: `${requestUrl.origin}/definir-senha`,
+        redirectTo: `${baseUrl}/definir-senha`,
       }
     });
 
