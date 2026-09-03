@@ -40,9 +40,13 @@ export async function POST(req: Request) {
 
     // generateLink will fail if the email is already registered, so we handle that error below.
 
+    const requestUrl = new URL(req.url);
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
       type: "invite",
       email: email,
+      options: {
+        redirectTo: `${requestUrl.origin}/definir-senha`,
+      }
     });
 
     if (error) {

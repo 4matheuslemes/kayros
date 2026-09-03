@@ -109,24 +109,44 @@ export function InviteClient() {
         </form>
 
         {inviteUrl && (
-          <div className="mt-6 p-4 border border-[var(--border)] rounded-lg bg-[var(--surface)] animate-in fade-in slide-in-from-bottom-2">
-            <h3 className="text-sm font-semibold text-[var(--ink)] mb-3">Link gerado com sucesso!</h3>
+          <div className="mt-8 pt-6 border-t border-[var(--border)] animate-in fade-in slide-in-from-bottom-4 flex flex-col gap-5">
+            <div className="flex flex-col items-center text-center gap-1.5">
+              <div className="w-12 h-12 rounded-full bg-[var(--success)]/15 flex items-center justify-center text-[var(--success)] mb-1">
+                <Check strokeWidth={3} size={24} />
+              </div>
+              <h3 className="text-subheading text-[var(--ink)]">Convite gerado!</h3>
+              <p className="text-body-sm text-[var(--ink-muted)] px-2">
+                Copie o link abaixo ou compartilhe diretamente com o novo usuário.
+              </p>
+            </div>
             
-            <div className="flex flex-col gap-3">
-              <Button type="button" variant="primary" size="lg" onClick={handleShare} className="w-full bg-[#25D366] hover:bg-[#128C7E] border-none text-white shadow-sm">
-                <Share2 size={18} className="mr-2" />
-                Enviar convite via WhatsApp
+            <div className="bg-[var(--background)] border border-[var(--border)] rounded-xl p-3 flex items-center gap-3">
+              <div className="flex-1 overflow-hidden pl-1">
+                <p className="text-[13px] font-mono text-[var(--ink-muted)] truncate select-all">
+                  {inviteUrl}
+                </p>
+              </div>
+              <Button 
+                type="button" 
+                variant="secondary" 
+                size="icon" 
+                onClick={handleCopy} 
+                className={`flex-shrink-0 w-9 h-9 rounded-full transition-colors ${copied ? 'bg-[var(--success)]/10 text-[var(--success)] border-transparent' : ''}`}
+              >
+                {copied ? <Check size={16} /> : <Copy size={16} />}
               </Button>
-              
-              <Button type="button" variant="secondary" size="lg" onClick={handleCopy} className="w-full">
-                {copied ? <Check size={18} className="mr-2 text-green-500" /> : <Copy size={18} className="mr-2" />}
-                {copied ? "Copiado!" : "Copiar Link"}
+            </div>
+
+            <div className="flex flex-col gap-2 mt-1">
+              <Button type="button" variant="primary" size="lg" onClick={handleShare} className="w-full shadow-sm">
+                <Share2 size={18} className="mr-2" />
+                Compartilhar
               </Button>
 
-              <Button type="button" variant="ghost" size="sm" onClick={() => {
+              <Button type="button" variant="ghost" size="lg" onClick={() => {
                 setInviteUrl(null);
                 reset();
-              }} className="w-full mt-2 text-[var(--ink-muted)]">
+              }} className="w-full text-[var(--ink-muted)] hover:text-[var(--ink)]">
                 Gerar outro convite
               </Button>
             </div>
