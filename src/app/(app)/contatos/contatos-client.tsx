@@ -35,7 +35,7 @@ export function ContatosClient({ userId }: ContatosClientProps) {
   const [deletingContactId, setDeletingContactId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<"todos" | ContactStatus>(initialFilter);
+  const [filter, setFilter] = useState<"todos" | "semana" | ContactStatus>(initialFilter);
 
   const filtered = useMemo(() => {
     return contacts

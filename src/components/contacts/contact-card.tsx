@@ -58,7 +58,7 @@ export function ContactCard({ contact }: ContactCardProps) {
                 Estudo
               </Badge>
               {currentUnitLabel && (
-                <Badge variant="secondary" className="bg-[var(--surface)] border border-[var(--border)] text-[var(--ink-muted)]">
+                <Badge variant="default" className="bg-[var(--surface)] border border-[var(--border)] text-[var(--ink-muted)]">
                   {currentUnitLabel}
                 </Badge>
               )}
