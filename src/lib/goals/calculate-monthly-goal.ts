@@ -26,11 +26,13 @@ export function calculateMonthlyGoal({
   hoursGoal,
   hoursDone,
   workingDays,
+  weeklySchedule,
 }: {
   today: Date;
   hoursGoal: number;
   hoursDone: number;
   workingDays: number[];
+  weeklySchedule?: Record<string, number>;
 }): MonthlyGoalCalculation {
   const current = startOfDay(today);
   const start = startOfMonth(current);
@@ -40,13 +42,23 @@ export function calculateMonthlyGoal({
   let totalScheduledDaysInMonth = 0;
   let scheduledDaysElapsed = 0;
   
+  let expectedMinutesByToday = 0;
+  let totalScheduledMinutesInMonth = 0;
+  
   const iterAll = new Date(start);
   while (!isAfter(iterAll, end)) {
     const isoDay = jsDayToIso(getDay(iterAll));
     if (workingDays.includes(isoDay)) {
       totalScheduledDaysInMonth++;
+      
+      const dayKey = ISO_DAY_TO_STRING[isoDay];
+      const mins = weeklySchedule?.[dayKey] ?? ((hoursGoal * 60) / (workingDays.length * 4.333)); // fallback se a migration não rodou
+      
+      totalScheduledMinutesInMonth += mins;
+
       if (iterAll.getTime() < current.getTime()) {
         scheduledDaysElapsed++;
+        expectedMinutesByToday += mins;
       } else {
         scheduledDaysRemaining++;
       }
@@ -54,26 +66,9 @@ export function calculateMonthlyGoal({
     iterAll.setDate(iterAll.getDate() + 1);
   }
 
-  const hoursRemaining = Math.max(0, hoursGoal - hoursDone);
-  const idealHoursPerScheduledDay =
-    scheduledDaysRemaining > 0 ? hoursRemaining / scheduledDaysRemaining : Infinity;
-
-  let status: "on_track" | "tight" | "impossible";
-
-  if (hoursRemaining === 0) {
-    status = "on_track";
-  } else if (scheduledDaysRemaining === 0) {
-    status = "impossible";
-  } else if (idealHoursPerScheduledDay > 4) {
-    status = "tight";
-  } else {
-    status = "on_track";
-  }
-
-  const expectedHoursByToday = totalScheduledDaysInMonth > 0 
-    ? hoursGoal * (scheduledDaysElapsed / totalScheduledDaysInMonth)
-    : 0;
-
+  const expectedHoursByToday = expectedMinutesByToday / 60;
+  
+  // Pace status is based on expected vs actual
   let paceStatus: "ahead" | "on_pace" | "behind" = "on_pace";
   if (totalScheduledDaysInMonth > 0) {
     if (hoursDone >= expectedHoursByToday + 1) {
@@ -81,6 +76,26 @@ export function calculateMonthlyGoal({
     } else if (hoursDone <= expectedHoursByToday - 1) {
       paceStatus = "behind";
     }
+  }
+
+  // Status is based on ability to reach the goal with remaining scheduled hours
+  const hoursRemaining = Math.max(0, hoursGoal - hoursDone);
+  const idealHoursPerScheduledDay = scheduledDaysRemaining > 0 ? hoursRemaining / scheduledDaysRemaining : Infinity;
+
+  let status: "on_track" | "tight" | "impossible";
+
+  const remainingScheduledMinutes = totalScheduledMinutesInMonth - expectedMinutesByToday;
+  const remainingScheduledHours = remainingScheduledMinutes / 60;
+
+  if (hoursRemaining === 0) {
+    status = "on_track";
+  } else if (scheduledDaysRemaining === 0) {
+    status = "impossible";
+  } else if (hoursRemaining > remainingScheduledHours * 1.5) {
+    // Se o que falta é 50% maior do que a pessoa projetou para o resto do mês, está puxado
+    status = "tight";
+  } else {
+    status = "on_track";
   }
 
   return {

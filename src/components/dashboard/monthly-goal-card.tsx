@@ -13,9 +13,10 @@ interface MonthlyGoalCardProps {
   completedMinutes: number;
   goalHours: number;
   workingDays: number[];
+  weeklySchedule?: Record<string, number>;
 }
 
-export function MonthlyGoalCard({ completedMinutes, goalHours, workingDays }: MonthlyGoalCardProps) {
+export function MonthlyGoalCard({ completedMinutes, goalHours, workingDays, weeklySchedule }: MonthlyGoalCardProps) {
   const goalMinutes = goalHours * 60;
   const rawHoursDone = completedMinutes / 60;
   const goalMet = completedMinutes >= goalMinutes;
@@ -25,6 +26,7 @@ export function MonthlyGoalCard({ completedMinutes, goalHours, workingDays }: Mo
     hoursGoal: goalHours,
     hoursDone: rawHoursDone,
     workingDays,
+    weeklySchedule,
   });
 
   const animatedHoursDone = useAnimatedNumber(rawHoursDone);
@@ -119,7 +121,7 @@ export function MonthlyGoalCard({ completedMinutes, goalHours, workingDays }: Mo
                 </span>
               </div>
               <span className="text-xs text-[var(--ink-muted)] leading-tight block">
-                por dia programado
+                por dia programado<br/>para bater a meta
               </span>
             </div>
             <div>
@@ -136,10 +138,10 @@ export function MonthlyGoalCard({ completedMinutes, goalHours, workingDays }: Mo
           </div>
           
           {calc.status === 'tight' && (
-            <p className="text-xs text-[var(--ink-muted)] mt-4">Ritmo puxado, mas dá.</p>
+            <p className="text-xs text-[var(--ink-muted)] mt-4">Você precisará exceder bastante sua programação normal para bater a meta.</p>
           )}
           {calc.status === 'impossible' && (
-            <p className="text-xs text-red-500 mt-4">Meta não é mais alcançável este mês com os dias programados.</p>
+            <p className="text-xs text-red-500 mt-4">Meta não é mais alcançável com a programação deste mês.</p>
           )}
         </>
       )}

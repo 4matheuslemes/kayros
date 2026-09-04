@@ -67,6 +67,7 @@ export function DashboardClient({ userId, profile }: DashboardClientProps) {
         completedMinutes={totalMinutes}
         goalHours={profile.monthly_goal_hours}
         workingDays={profile.working_days ?? [1, 2, 3, 4, 5, 6, 7]}
+        weeklySchedule={profile.weekly_schedule}
       />
 
       <AgendaCalendar userId={userId} profile={profile} />
