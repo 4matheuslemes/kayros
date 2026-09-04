@@ -6,7 +6,9 @@ import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "kairos-theme";
 
-export function ThemeSwitch() {
+import { Button } from "@/components/ui/button";
+
+export function ThemeToggle() {
   const [dark, setDark] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -27,34 +29,18 @@ export function ThemeSwitch() {
   };
 
   if (!mounted) {
-    return <div className="h-14 bg-[var(--surface)] border border-[var(--border)] rounded-lg animate-pulse" />;
+    return <div className="w-10 h-10 rounded-full bg-[var(--surface)] border border-[var(--border)] animate-pulse" />;
   }
 
   return (
-    <button
+    <Button
+      variant="ghost"
+      size="icon"
       onClick={toggle}
-      className="w-full flex items-center justify-between px-5 py-4 hover:bg-[var(--background)] transition-colors"
+      className="rounded-full w-10 h-10 text-[var(--ink-muted)] hover:text-[var(--ink)] hover:bg-[var(--surface)]"
       aria-label={dark ? "Mudar para modo claro" : "Mudar para modo escuro"}
     >
-      <div className="flex items-center gap-3">
-        {dark ? <Moon size={16} className="text-[var(--ink-muted)]" /> : <Sun size={16} className="text-[var(--ink-muted)]" />}
-        <div className="text-left">
-          <span className="text-body-sm text-[var(--ink)] block leading-tight">Modo escuro</span>
-          <span className="text-caption text-[var(--ink-muted)] mt-0.5 block">Tema visual do aplicativo</span>
-        </div>
-      </div>
-      
-      {/* Switch Track */}
-      <div className={cn(
-        "w-11 h-6 rounded-full transition-colors relative flex items-center shadow-inner",
-        dark ? "bg-[var(--primary)]" : "bg-[var(--border)]"
-      )}>
-        {/* Switch Thumb */}
-        <div className={cn(
-          "w-5 h-5 bg-white rounded-full absolute shadow-sm transition-transform duration-200 ease-out",
-          dark ? "translate-x-5" : "translate-x-0.5"
-        )} />
-      </div>
-    </button>
+      {dark ? <Moon size={20} /> : <Sun size={20} />}
+    </Button>
   );
 }

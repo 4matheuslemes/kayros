@@ -8,6 +8,7 @@ import { HoursRegistrationCard } from "@/components/dashboard/hours-registration
 import { LetterMeetingShortcut } from "@/components/dashboard/letter-meeting-shortcut";
 import { AgendaCalendar } from "@/components/dashboard/agenda-calendar";
 import { ReleaseNotesModal } from "@/components/dashboard/release-notes-modal";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { useMonthRecords, useDailyRecords, useContacts, useUpcomingVisits } from "@/lib/db/hooks";
 import type { Profile } from "@/lib/db/dexie";
 
@@ -34,6 +35,7 @@ export function DashboardClient({ userId, profile }: DashboardClientProps) {
       <AppHeader
         title={`${greeting}, ${firstName}`}
         subtitle={profile.congregation_name ?? undefined}
+        right={<ThemeToggle />}
       />
 
       <div className="flex gap-2 -mt-2">

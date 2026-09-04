@@ -4,13 +4,7 @@ import { ArrowLeft } from "lucide-react";
 export default function Loading() {
   return (
     <div className="flex flex-col gap-4 pb-8">
-      <div className="mb-2">
-        <div className="inline-flex items-center gap-1.5 text-body-sm font-medium text-[var(--ink-muted)] opacity-50 pointer-events-none">
-          <ArrowLeft size={16} />
-          Voltar para Início
-        </div>
-      </div>
-      
+
       <AppHeader
         title="Histórico de Horas"
         subtitle="Extrato completo de suas atividades"

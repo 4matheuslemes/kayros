@@ -16,7 +16,6 @@ import { APP_NAME } from "@/lib/constants";
 import { getDb, type Profile } from "@/lib/db/dexie";
 import Link from "next/link";
 import { SecuritySettings } from "@/components/security/security-settings";
-import { ThemeSwitch } from "@/components/layout/theme-toggle";
 import { calculateProjectedHours, ISO_DAY_TO_STRING } from "@/lib/goals/calculate-monthly-goal";
 import { formatHours } from "@/lib/format";
 
@@ -376,7 +375,6 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
         </div>
         <Card padding="none" className="overflow-hidden">
           <div className="flex flex-col">
-          <ThemeSwitch />
           <SecuritySettings />
           <Link
             href="/relatorio"

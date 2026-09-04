@@ -158,78 +158,80 @@ export function ContatosClient({ userId }: ContatosClientProps) {
       <AppHeader
         title="Interessados"
         right={
-          <Button
-            variant="primary"
-            size="icon"
-            onClick={() => setNewOpen(true)}
-            aria-label="Novo interessado"
-            id="btn-new-contact"
-          >
-            <Plus size={20} />
-          </Button>
+          contacts.length > 0 ? (
+            <Button
+              variant="primary"
+              size="icon"
+              onClick={() => setNewOpen(true)}
+              aria-label="Novo interessado"
+              id="btn-new-contact"
+            >
+              <Plus size={20} />
+            </Button>
+          ) : undefined
         }
       />
 
-      {/* Search */}
-      <div className="relative">
-        <Search size={16} className="absolute left-3.5 top-3.5 text-[var(--ink-muted)]" />
-        <Input
-          placeholder="Buscar por nome…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="pl-10"
-          id="contact-search"
-        />
-      </div>
+      {/* Search — only when there are contacts */}
+      {contacts.length > 0 && (
+        <div className="relative">
+          <Search size={16} className="absolute left-3.5 top-3.5 text-[var(--ink-muted)]" />
+          <Input
+            placeholder="Buscar por nome…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="pl-10"
+            id="contact-search"
+          />
+        </div>
+      )}
 
-      {/* Filter chips */}
-      <div className="flex gap-2">
-        {(["todos", "revisita", "estudo_ativo", "semana"] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-3 py-1.5 rounded-full text-xs font-sans font-medium border transition-all whitespace-nowrap ${
-              filter === f
-                ? "bg-[var(--primary)] border-[var(--primary)] text-white"
-                : "bg-[var(--surface)] border-[var(--border)] text-[var(--ink-muted)]"
-            }`}
-          >
-            {f === "todos" ? "Todos" : f === "revisita" ? "Revisitas" : f === "estudo_ativo" ? "Estudos" : "Na semana"}
-            {f !== "semana" && (
-              <span className="ml-1.5 opacity-60">
-                {f === "todos"
-                  ? contacts.length
-                  : contacts.filter((c) => c.status === f).length}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
+      {/* Filter chips — only when there are contacts */}
+      {contacts.length > 0 && (
+        <div className="flex gap-2">
+          {(["todos", "revisita", "estudo_ativo", "semana"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-3 py-1.5 rounded-full text-xs font-sans font-medium border transition-all whitespace-nowrap ${
+                filter === f
+                  ? "bg-[var(--primary)] border-[var(--primary)] text-white"
+                  : "bg-[var(--surface)] border-[var(--border)] text-[var(--ink-muted)]"
+              }`}
+            >
+              {f === "todos" ? "Todos" : f === "revisita" ? "Revisitas" : f === "estudo_ativo" ? "Estudos" : "Na semana"}
+              {f !== "semana" && (
+                <span className="ml-1.5 opacity-60">
+                  {f === "todos"
+                    ? contacts.length
+                    : contacts.filter((c) => c.status === f).length}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* List */}
       {filter === "semana" ? (
         <WeeklyStudiesList contacts={contacts} />
+      ) : contacts.length === 0 ? (
+        <EmptyState
+          icon={<Users size={28} />}
+          title="Nenhum interessado ainda"
+          description="Adicione a primeira revisita ou estudo bíblico"
+          action={
+            <Button variant="primary" onClick={() => setNewOpen(true)} id="btn-empty-new-contact">
+              <Plus size={16} />
+              Adicionar interessado
+            </Button>
+          }
+        />
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={<Users size={28} />}
-          title={
-            contacts.length === 0
-              ? "Nenhum interessado ainda"
-              : "Nenhum resultado encontrado"
-          }
-          description={
-            contacts.length === 0
-              ? "Toque em + para adicionar a primeira revisita ou estudo"
-              : "Tente ajustar o filtro ou a busca"
-          }
-          action={
-            contacts.length === 0 ? (
-              <Button variant="primary" onClick={() => setNewOpen(true)} id="btn-empty-new-contact">
-                <Plus size={16} />
-                Adicionar interessado
-              </Button>
-            ) : undefined
-          }
+          title="Nenhum resultado encontrado"
+          description="Tente ajustar o filtro ou a busca"
         />
       ) : (
         <div className="flex flex-col gap-3">

@@ -1,14 +1,15 @@
 "use client";
 
-import { useForm, useWatch } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { Input, Textarea, Field, Select } from "@/components/ui/input";
+import { Input, Textarea, Field } from "@/components/ui/input";
 import { CONTACT_STATUS } from "@/lib/constants";
 import type { Contact } from "@/lib/db/dexie";
 import { StudyProgressField } from "./study-progress-field";
+import { cn } from "@/lib/utils";
 
 const schema = z.object({
   name:      z.string().min(1, "Nome obrigatório"),
@@ -69,10 +70,34 @@ export function ContactForm({
   });
 
   const status = watch("status");
+  const isEstudo = status === "estudo_ativo";
   const today = format(new Date(), "yyyy-MM-dd");
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+
+      {/* Status toggle — first, controls which sections appear below */}
+      <div className="flex gap-2">
+        {CONTACT_STATUS.map((s) => (
+          <button
+            key={s.value}
+            type="button"
+            onClick={() => setValue("status", s.value, { shouldValidate: true })}
+            className={cn(
+              "flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-all",
+              status === s.value
+                ? s.value === "estudo_ativo"
+                  ? "bg-[var(--success)]/15 border-[var(--success)] text-[var(--success)]"
+                  : "bg-[var(--primary)]/10 border-[var(--primary)] text-[var(--primary)]"
+                : "bg-[var(--surface)] border-[var(--border)] text-[var(--ink-muted)]"
+            )}
+          >
+            {s.value === "revisita" ? "Revisita" : "Estudo Ativo"}
+          </button>
+        ))}
+      </div>
+
+      {/* Basic info — always visible */}
       <Field label="Nome" htmlFor="contact-name" error={errors.name?.message} required>
         <Input
           id="contact-name"
@@ -100,16 +125,21 @@ export function ContactForm({
         />
       </Field>
 
-      <Field label="Temas de interesse" htmlFor="contact-interests" hint="Versículos, publicações, tópicos discutidos">
+      <Field
+        label={isEstudo ? "Observações" : "Temas de interesse"}
+        htmlFor="contact-interests"
+        hint={isEstudo ? "Opcional" : "Versículos, publicações, tópicos discutidos"}
+      >
         <Textarea
           id="contact-interests"
-          placeholder="Ex: Esperança da ressurreição, Salmo 37…"
+          placeholder={isEstudo ? "Observações gerais..." : "Ex: Esperança da ressurreição, Salmo 37…"}
           rows={3}
           {...register("interests")}
         />
       </Field>
 
-      {isNew && (
+      {/* Revisita nova: bloco "Primeira Conversa" */}
+      {isNew && !isEstudo && (
         <div className="flex flex-col gap-4 p-4 mt-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl">
           <h3 className="text-subheading text-[var(--ink)] mb-1">Primeira Conversa</h3>
           
@@ -143,15 +173,8 @@ export function ContactForm({
         </div>
       )}
 
-      <Field label="Status" htmlFor="contact-status">
-        <Select
-          id="contact-status"
-          options={CONTACT_STATUS.map((s) => ({ value: s.value, label: s.label }))}
-          {...register("status")}
-        />
-      </Field>
-
-      {status === "estudo_ativo" && (
+      {/* Estudo Ativo: campos de progresso do estudo */}
+      {isEstudo && (
         <StudyProgressField register={register} watch={watch} setValue={setValue} errors={errors} />
       )}
 
