@@ -300,7 +300,7 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
                         >
                           -
                         </Button>
-                        <span className="font-display font-medium w-16 text-center text-[var(--ink)]">
+                        <span className="font-display font-medium w-24 text-center text-[var(--ink)] whitespace-nowrap">
                           {formatHours(currentMins / 60)}
                         </span>
                         <Button 

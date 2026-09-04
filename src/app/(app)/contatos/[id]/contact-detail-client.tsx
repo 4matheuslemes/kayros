@@ -6,9 +6,10 @@ import { ArrowLeft, Phone, MapPin, BookOpen, Plus, Edit2, Trash2 } from "lucide-
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { VisitTimeline } from "@/components/contacts/visit-timeline";
 import { VisitFormSheet } from "@/components/contacts/visit-form-sheet";
+import { ConvertStudySheet } from "@/components/contacts/convert-study-sheet";
 import { ContactForm, type ContactFormData } from "@/components/contacts/contact-form";
 import { Drawer } from "@/components/ui/drawer";
 import { useContact } from "@/lib/db/hooks";
@@ -20,6 +21,7 @@ export function ContactDetailClient({ contactId }: { contactId: string }) {
   const router = useRouter();
   const { contact, visits, loading, refresh } = useContact(contactId);
   const [visitOpen, setVisitOpen] = useState(false);
+  const [convertOpen, setConvertOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -35,6 +37,10 @@ export function ContactDetailClient({ contactId }: { contactId: string }) {
       phone:     data.phone ?? "",
       interests: data.interests ?? "",
       status:    data.status as ContactStatus,
+      study_book_id: data.study_book_id,
+      study_current_unit_id: data.study_current_unit_id,
+      study_frequency: data.study_frequency,
+      study_days: data.study_days,
       updated_at: now,
       synced: false,
     };
@@ -135,56 +141,83 @@ export function ContactDetailClient({ contactId }: { contactId: string }) {
         </div>
       </div>
 
-      {/* Info card */}
+      {/* Info details */}
       {(contact.address || contact.phone || contact.interests) && (
-        <Card>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4">
+          
           <div className="flex flex-col gap-3">
             {contact.phone && (
               <a
                 href={`tel:${contact.phone}`}
-                className="flex items-center gap-3 text-body-sm text-[var(--ink)] hover:text-[var(--primary)] transition-colors"
+                className="flex items-center gap-2.5 text-body-sm text-[var(--ink)] hover:text-[var(--primary)] transition-colors w-fit"
               >
-                <Phone size={16} className="text-[var(--ink-muted)]" />
+                <Phone size={15} className="text-[var(--ink-muted)]" />
                 {contact.phone}
               </a>
             )}
+            
             {contact.address && (
-              <div className="flex items-start gap-3">
-                <MapPin size={16} className="flex-shrink-0 mt-0.5 text-[var(--ink-muted)]" />
-                <span className="text-body-sm text-[var(--ink)]">{contact.address}</span>
-              </div>
-            )}
-            {contact.interests && (
-              <div>
-                <p className="text-caption text-[var(--ink-muted)] mb-1">Interesses</p>
-                <p className="text-body-sm text-[var(--ink)]">{contact.interests}</p>
+              <div className="flex items-start gap-2.5">
+                <MapPin size={15} className="flex-shrink-0 mt-0.5 text-[var(--ink-muted)]" />
+                <span className="text-body-sm text-[var(--ink)] leading-snug">{contact.address}</span>
               </div>
             )}
           </div>
-        </Card>
+
+          {contact.interests && (
+            <div className="sm:border-l sm:border-[var(--border)] sm:pl-4 pt-3 sm:pt-0 border-t sm:border-t-0 border-[var(--border)]">
+              <p className="text-caption font-semibold text-[var(--ink-muted)] uppercase tracking-wider mb-1">Interesses</p>
+              <p className="text-body-sm text-[var(--ink)] leading-snug">{contact.interests}</p>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Visit history */}
       <div>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col gap-3 mb-4">
           <h2 className="text-subheading text-[var(--ink)]">Histórico de visitas</h2>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => setVisitOpen(true)}
-            id="btn-new-visit"
-          >
-            <Plus size={16} />
-            Registrar visita
-          </Button>
+          <div className="flex items-center gap-2">
+            {!visits[0]?.next_visit_date && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setVisitOpen(true)}
+                className="flex-1"
+              >
+                <Plus size={16} className="mr-1" />
+                Registrar visita
+              </Button>
+            )}
+            
+            {contact.status === "revisita" && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setConvertOpen(true)}
+                className="flex-1 text-[var(--success)] hover:text-[var(--success)]/80 hover:bg-[var(--success)]/10"
+              >
+                <BookOpen size={16} className="mr-1" />
+                Tornar estudo
+              </Button>
+            )}
+          </div>
         </div>
-        <VisitTimeline visits={visits} />
+        <VisitTimeline visits={visits} onMarkAsDone={() => setVisitOpen(true)} />
       </div>
 
       <VisitFormSheet
         open={visitOpen}
         onClose={() => setVisitOpen(false)}
         contactId={contactId}
+        contact={contact}
+        onSaved={refresh}
+      />
+
+      <ConvertStudySheet
+        open={convertOpen}
+        onClose={() => setConvertOpen(false)}
+        contact={contact}
         onSaved={refresh}
       />
 

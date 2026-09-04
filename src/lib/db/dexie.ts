@@ -26,6 +26,11 @@ export interface Contact {
   phone?: string;
   interests?: string;
   status: ContactStatus;
+  study_book_id?: string;
+  study_current_unit_id?: string;
+  study_frequency?: number;
+  study_days?: number[];
+  study_time?: string; // "HH:MM"
   created_at: string;
   updated_at: string;
   synced: boolean;
@@ -37,6 +42,7 @@ export interface VisitHistory {
   visit_date: string; // ISO date
   notes?: string;
   next_visit_date?: string; // ISO date, nullable
+  next_visit_time?: string; // "HH:MM", nullable
   created_at: string;
   updated_at: string;
   synced: boolean;

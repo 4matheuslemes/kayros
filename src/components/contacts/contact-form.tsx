@@ -1,12 +1,14 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea, Field, Select } from "@/components/ui/input";
 import { CONTACT_STATUS } from "@/lib/constants";
 import type { Contact } from "@/lib/db/dexie";
+import { StudyProgressField } from "./study-progress-field";
 
 const schema = z.object({
   name:      z.string().min(1, "Nome obrigatório"),
@@ -14,6 +16,14 @@ const schema = z.object({
   phone:     z.string().optional(),
   interests: z.string().optional(),
   status:    z.string().min(1),
+  study_book_id: z.string().optional(),
+  study_current_unit_id: z.string().optional(),
+  study_frequency: z.number().optional(),
+  study_days: z.array(z.number()).optional(),
+  study_time: z.string().optional(),
+  initial_visit_notes: z.string().optional(),
+  initial_next_visit_date: z.string().optional(),
+  initial_next_visit_time: z.string().optional(),
 });
 
 export type ContactFormData = z.infer<typeof schema>;
@@ -23,6 +33,7 @@ interface ContactFormProps {
   onSubmit: (data: ContactFormData) => Promise<void>;
   loading?: boolean;
   submitLabel?: string;
+  isNew?: boolean;
 }
 
 export function ContactForm({
@@ -30,10 +41,13 @@ export function ContactForm({
   onSubmit,
   loading,
   submitLabel = "Salvar interessado",
+  isNew = false,
 }: ContactFormProps) {
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<ContactFormData>({
     resolver: zodResolver(schema),
@@ -43,8 +57,19 @@ export function ContactForm({
       phone:     defaultValues?.phone ?? "",
       interests: defaultValues?.interests ?? "",
       status:    defaultValues?.status ?? "revisita",
+      study_book_id: defaultValues?.study_book_id ?? "",
+      study_current_unit_id: defaultValues?.study_current_unit_id ?? "",
+      study_frequency: defaultValues?.study_frequency ?? 1,
+      study_days: defaultValues?.study_days ?? [],
+      study_time: defaultValues?.study_time ?? "",
+      initial_visit_notes: "",
+      initial_next_visit_date: "",
+      initial_next_visit_time: "",
     },
   });
+
+  const status = watch("status");
+  const today = format(new Date(), "yyyy-MM-dd");
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
@@ -84,6 +109,40 @@ export function ContactForm({
         />
       </Field>
 
+      {isNew && (
+        <div className="flex flex-col gap-4 p-4 mt-2 bg-[var(--surface)] border border-[var(--border)] rounded-xl">
+          <h3 className="text-subheading text-[var(--ink)] mb-1">Primeira Conversa</h3>
+          
+          <Field label="O que conversamos" htmlFor="initial-visit-notes">
+            <Textarea
+              id="initial-visit-notes"
+              placeholder="Anotações da conversa inicial..."
+              rows={3}
+              {...register("initial_visit_notes")}
+            />
+          </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Agendar retorno" htmlFor="initial-next-visit-date" hint="Opcional">
+              <Input
+                id="initial-next-visit-date"
+                type="date"
+                min={today}
+                {...register("initial_next_visit_date")}
+              />
+            </Field>
+
+            <Field label="Horário" htmlFor="initial-next-visit-time">
+              <Input
+                id="initial-next-visit-time"
+                type="time"
+                {...register("initial_next_visit_time")}
+              />
+            </Field>
+          </div>
+        </div>
+      )}
+
       <Field label="Status" htmlFor="contact-status">
         <Select
           id="contact-status"
@@ -91,6 +150,10 @@ export function ContactForm({
           {...register("status")}
         />
       </Field>
+
+      {status === "estudo_ativo" && (
+        <StudyProgressField register={register} watch={watch} setValue={setValue} errors={errors} />
+      )}
 
       <Button
         type="submit"

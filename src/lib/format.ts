@@ -1,7 +1,12 @@
 export function formatHours(hours: number): string {
-  // If the number is effectively an integer, omit decimals
-  if (Math.abs(hours - Math.round(hours)) < 0.01) {
-    return `${Math.round(hours)}h`;
-  }
-  return `${hours.toFixed(1)}h`;
+  if (hours <= 0) return "0h";
+  const totalMinutes = Math.round(hours * 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  
+  if (h === 0) return `${m}min`;
+  if (m === 0) return `${h}h`;
+  
+  // Ex: 1h 30min
+  return `${h}h ${m}min`;
 }

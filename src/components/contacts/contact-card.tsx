@@ -5,6 +5,7 @@ import { ChevronRight, BookOpen, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { Contact } from "@/lib/db/dexie";
+import { STUDY_BOOKS } from "@/lib/study-books";
 
 interface ContactCardProps {
   contact: Contact;
@@ -17,6 +18,10 @@ export function ContactCard({ contact }: ContactCardProps) {
     .map((w) => w[0])
     .join("")
     .toUpperCase();
+
+  const currentUnitLabel = contact.study_book_id && contact.study_current_unit_id
+    ? STUDY_BOOKS.find(b => b.id === contact.study_book_id)?.units.find(u => u.id === contact.study_current_unit_id)?.label
+    : null;
 
   return (
     <Link
@@ -47,10 +52,17 @@ export function ContactCard({ contact }: ContactCardProps) {
             {contact.name}
           </span>
           {contact.status === "estudo_ativo" && (
-            <Badge variant="success" className="flex-shrink-0">
-              <BookOpen size={10} />
-              Estudo
-            </Badge>
+            <div className="flex gap-1 items-center flex-shrink-0">
+              <Badge variant="success">
+                <BookOpen size={10} />
+                Estudo
+              </Badge>
+              {currentUnitLabel && (
+                <Badge variant="secondary" className="bg-[var(--surface)] border border-[var(--border)] text-[var(--ink-muted)]">
+                  {currentUnitLabel}
+                </Badge>
+              )}
+            </div>
           )}
         </div>
         {contact.address && (

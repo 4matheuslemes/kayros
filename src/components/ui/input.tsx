@@ -95,14 +95,15 @@ Textarea.displayName = "Textarea";
    Select
 ───────────────────────────────────────────────────────────── */
 export interface SelectProps
-  extends React.SelectHTMLAttributes<HTMLSelectElement> {
+  extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "children"> {
   error?: boolean;
-  options: { value: string; label: string }[];
+  options?: { value: string; label: string }[];
+  groups?: { label: string; options: { value: string; label: string }[] }[];
   placeholder?: string;
 }
 
 export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
-  ({ className, error, options, placeholder, ...props }, ref) => (
+  ({ className, error, options, groups, placeholder, ...props }, ref) => (
     <select
       ref={ref}
       className={cn(
@@ -121,10 +122,19 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           {placeholder}
         </option>
       )}
-      {options.map((opt) => (
+      {options && options.map((opt) => (
         <option key={opt.value} value={opt.value}>
           {opt.label}
         </option>
+      ))}
+      {groups && groups.map((group) => (
+        <optgroup key={group.label} label={group.label}>
+          {group.options.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </optgroup>
       ))}
     </select>
   )

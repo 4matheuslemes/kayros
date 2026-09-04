@@ -18,6 +18,7 @@ import { useContacts } from "@/lib/db/hooks";
 import { getDb, type Contact } from "@/lib/db/dexie";
 import { enqueueSync } from "@/lib/db/sync";
 import type { ContactStatus } from "@/lib/constants";
+import { WeeklyStudiesList } from "@/components/contacts/weekly-studies-list";
 import Loading from "./loading";
 
 interface ContatosClientProps {
@@ -46,14 +47,21 @@ export function ContatosClient({ userId }: ContatosClientProps) {
     setSaving(true);
     const db = getDb();
     const now = new Date().toISOString();
+    
+    const contactId = uuidv4();
     const contact = {
-      id: uuidv4(),
+      id: contactId,
       user_id: userId,
       name: data.name,
       address: data.address ?? "",
       phone: data.phone ?? "",
       interests: data.interests ?? "",
       status: data.status as ContactStatus,
+      study_book_id: data.study_book_id || undefined,
+      study_current_unit_id: data.study_current_unit_id || undefined,
+      study_frequency: data.study_frequency || undefined,
+      study_days: data.study_days || undefined,
+      study_time: data.study_time || undefined,
       created_at: now,
       updated_at: now,
       synced: false,
@@ -62,6 +70,26 @@ export function ContatosClient({ userId }: ContatosClientProps) {
     try {
       await db.contacts.add(contact);
       await enqueueSync("contacts", contact.id, "INSERT", contact);
+
+      // Check if we need to create an initial visit
+      if (data.initial_visit_notes || data.initial_next_visit_date || data.initial_next_visit_time) {
+        const visitId = uuidv4();
+        const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+        const initialVisit = {
+          id: visitId,
+          contact_id: contactId,
+          visit_date: today,
+          notes: data.initial_visit_notes ?? "",
+          next_visit_date: data.initial_next_visit_date || undefined,
+          next_visit_time: data.initial_next_visit_time || undefined,
+          created_at: now,
+          updated_at: now,
+          synced: false,
+        };
+        await db.visit_history.add(initialVisit);
+        await enqueueSync("visit_history", initialVisit.id, "INSERT", initialVisit);
+      }
+
       toast.success(`${data.name} adicionado`);
       await refresh();
       setNewOpen(false);
@@ -85,6 +113,11 @@ export function ContatosClient({ userId }: ContatosClientProps) {
       phone:     data.phone ?? "",
       interests: data.interests ?? "",
       status:    data.status as ContactStatus,
+      study_book_id: data.study_book_id || undefined,
+      study_current_unit_id: data.study_current_unit_id || undefined,
+      study_frequency: data.study_frequency || undefined,
+      study_days: data.study_days || undefined,
+      study_time: data.study_time || undefined,
       updated_at: now,
       synced: false,
     };
@@ -151,28 +184,32 @@ export function ContatosClient({ userId }: ContatosClientProps) {
 
       {/* Filter chips */}
       <div className="flex gap-2">
-        {(["todos", "revisita", "estudo_ativo"] as const).map((f) => (
+        {(["todos", "revisita", "estudo_ativo", "semana"] as const).map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`px-3 py-1.5 rounded-full text-xs font-sans font-medium border transition-all ${
+            className={`px-3 py-1.5 rounded-full text-xs font-sans font-medium border transition-all whitespace-nowrap ${
               filter === f
                 ? "bg-[var(--primary)] border-[var(--primary)] text-white"
                 : "bg-[var(--surface)] border-[var(--border)] text-[var(--ink-muted)]"
             }`}
           >
-            {f === "todos" ? "Todos" : f === "revisita" ? "Revisitas" : "Estudos"}
-            <span className="ml-1.5 opacity-60">
-              {f === "todos"
-                ? contacts.length
-                : contacts.filter((c) => c.status === f).length}
-            </span>
+            {f === "todos" ? "Todos" : f === "revisita" ? "Revisitas" : f === "estudo_ativo" ? "Estudos" : "Na semana"}
+            {f !== "semana" && (
+              <span className="ml-1.5 opacity-60">
+                {f === "todos"
+                  ? contacts.length
+                  : contacts.filter((c) => c.status === f).length}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
       {/* List */}
-      {filtered.length === 0 ? (
+      {filter === "semana" ? (
+        <WeeklyStudiesList contacts={contacts} />
+      ) : filtered.length === 0 ? (
         <EmptyState
           icon={<Users size={28} />}
           title={
@@ -214,7 +251,7 @@ export function ContatosClient({ userId }: ContatosClientProps) {
         title="Novo interessado"
         description="Adicione os dados da pessoa"
       >
-        <ContactForm onSubmit={handleCreate} loading={saving} />
+        <ContactForm onSubmit={handleCreate} loading={saving} isNew={true} />
       </Drawer>
 
       {/* Edit contact drawer */}

@@ -4,23 +4,46 @@ import { useMemo } from "react";
 import { format, isSameDay, parseISO, addDays, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarDays } from "lucide-react";
-import { useAllVisits } from "@/lib/db/hooks";
+import { CalendarDays, BookOpen, User } from "lucide-react";
+import { useAllVisits, useContacts } from "@/lib/db/hooks";
 import { ISO_DAY_TO_STRING } from "@/lib/goals/calculate-monthly-goal";
 import type { Profile } from "@/lib/db/dexie";
 import { formatHours } from "@/lib/format";
+import Link from "next/link";
 
 interface AgendaCalendarProps {
   userId: string;
   profile: Profile;
 }
 
+type AgendaEvent = {
+  id: string;
+  contactId: string;
+  title: string;
+  time?: string;
+  type: "visit" | "study";
+};
+
 export function AgendaCalendar({ userId, profile }: AgendaCalendarProps) {
   const { visits } = useAllVisits(userId);
+  const { contacts } = useContacts(userId);
   const weeklySchedule = profile.weekly_schedule || {};
   const activeWorkingDays = profile.working_days || [];
 
   const today = startOfDay(new Date());
+
+  const latestVisits = useMemo(() => {
+    const map = new Map();
+    const sortedVisits = [...visits].sort((a, b) => 
+      parseISO(b.visit_date).getTime() - parseISO(a.visit_date).getTime()
+    );
+    for (const v of sortedVisits) {
+      if (!map.has(v.contact_id)) {
+        map.set(v.contact_id, v);
+      }
+    }
+    return Array.from(map.values());
+  }, [visits]);
   
   // Helper to get events for a specific date
   const getEventsForDate = (date: Date) => {
@@ -31,13 +54,55 @@ export function AgendaCalendar({ userId, profile }: AgendaCalendarProps) {
       ? (weeklySchedule[dayKey] ?? 0)
       : 0;
       
-    const dayVisits = visits.filter(v => v.next_visit_date && isSameDay(parseISO(v.next_visit_date), date));
+    // 1. One-off visits
+    const dayVisits = latestVisits.filter(v => v.next_visit_date && isSameDay(parseISO(v.next_visit_date), date));
     
-    return { plannedMins, dayVisits };
+    // 2. Recurring studies
+    // A recurring study appears if:
+    // - status is "estudo_ativo"
+    // - study_days includes isoDay
+    const dayStudies = contacts.filter(c => 
+      c.status === "estudo_ativo" && 
+      c.study_days?.includes(isoDay)
+    );
+
+    const mergedEvents: AgendaEvent[] = [];
+
+    // Add visits
+    for (const v of dayVisits) {
+      mergedEvents.push({
+        id: `v-${v.id}`,
+        contactId: v.contact_id,
+        title: v.contact_name,
+        time: v.next_visit_time, // HH:MM
+        type: "visit"
+      });
+    }
+
+    // Add studies
+    for (const c of dayStudies) {
+      mergedEvents.push({
+        id: `s-${c.id}-${isoDay}`,
+        contactId: c.id,
+        title: c.name,
+        time: c.study_time,
+        type: "study"
+      });
+    }
+
+    // Sort by time (events without time go to the end)
+    mergedEvents.sort((a, b) => {
+      if (a.time && b.time) return a.time.localeCompare(b.time);
+      if (a.time) return -1;
+      if (b.time) return 1;
+      return 0;
+    });
+    
+    return { plannedMins, events: mergedEvents };
   };
 
   const todayEvents = getEventsForDate(today);
-  const hasTodayEvents = todayEvents.plannedMins > 0 || todayEvents.dayVisits.length > 0;
+  const hasTodayEvents = todayEvents.plannedMins > 0 || todayEvents.events.length > 0;
 
   // Get upcoming events for the rest of the current week
   const upcomingDaysWithEvents = useMemo(() => {
@@ -50,16 +115,16 @@ export function AgendaCalendar({ userId, profile }: AgendaCalendarProps) {
       const isoDay = date.getDay() === 0 ? 7 : date.getDay();
       if (isoDay === 1) break; // Reached next Monday
       
-      const events = getEventsForDate(date);
-      if (events.plannedMins > 0 || events.dayVisits.length > 0) {
-        days.push({ date, ...events });
+      const dayData = getEventsForDate(date);
+      if (dayData.plannedMins > 0 || dayData.events.length > 0) {
+        days.push({ date, ...dayData });
       }
     }
     return days;
-  }, [today, activeWorkingDays, weeklySchedule, visits]);
+  }, [today, activeWorkingDays, weeklySchedule, latestVisits, contacts]); // added latestVisits, contacts as dep
 
   const overdueVisits = useMemo(() => {
-    return visits.filter(v => {
+    return latestVisits.filter(v => {
       if (!v.next_visit_date) return false;
       const date = parseISO(v.next_visit_date);
       // is past and NOT today
@@ -71,7 +136,28 @@ export function AgendaCalendar({ userId, profile }: AgendaCalendarProps) {
       }
       return false;
     }).sort((a, b) => parseISO(a.next_visit_date!).getTime() - parseISO(b.next_visit_date!).getTime());
-  }, [visits, today]);
+  }, [latestVisits, today]);
+
+  const renderEvent = (event: AgendaEvent) => {
+    const isStudy = event.type === "study";
+    const Icon = isStudy ? BookOpen : User;
+    const colorClass = isStudy ? "text-[var(--success)] border-[var(--success)] bg-[var(--success)]/10" : "text-[var(--primary)] border-[var(--primary)] bg-[var(--primary)]/10";
+    const textClass = isStudy ? "text-[var(--success)]" : "text-[var(--primary)]";
+
+    return (
+      <Link key={event.id} href={`/contatos/${event.contactId}`}>
+        <div className={`pl-2 border-l-[3px] py-1.5 rounded-r-md hover:brightness-95 transition-all ${colorClass}`}>
+          <div className={`text-[13px] font-bold leading-tight truncate flex items-center gap-1.5 ${textClass}`}>
+            <Icon size={12} className="flex-shrink-0" />
+            {event.title}
+          </div>
+          <div className={`text-[11px] font-medium leading-tight mt-0.5 ${textClass}`}>
+            {event.time ? event.time : "Sem horário"}
+          </div>
+        </div>
+      </Link>
+    );
+  };
 
   return (
     <Card className="overflow-hidden shadow-sm border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-dark)]">
@@ -100,7 +186,7 @@ export function AgendaCalendar({ userId, profile }: AgendaCalendarProps) {
             ) : (
               <div className="space-y-2">
                 {todayEvents.plannedMins > 0 && (
-                  <div className="pl-2 border-l-[3px] border-[var(--accent)] py-1 bg-[var(--accent)]/10 rounded-r-md">
+                  <div className="pl-2 border-l-[3px] border-[var(--accent)] py-1.5 bg-[var(--accent)]/10 rounded-r-md">
                     <div className="text-[13px] font-bold text-[var(--accent)] leading-tight truncate">
                       Planejado
                     </div>
@@ -110,16 +196,7 @@ export function AgendaCalendar({ userId, profile }: AgendaCalendarProps) {
                   </div>
                 )}
                 
-                {todayEvents.dayVisits.map(visit => (
-                  <div key={visit.id} className="pl-2 border-l-[3px] border-[var(--success)] py-1 bg-[var(--success)]/10 rounded-r-md">
-                    <div className="text-[13px] font-bold text-[var(--success)] leading-tight truncate">
-                      Visita: {visit.contact_name}
-                    </div>
-                    <div className="text-[11px] font-medium text-[var(--success)] leading-tight mt-0.5">
-                      {format(parseISO(visit.next_visit_date!), "HH:mm")}
-                    </div>
-                  </div>
-                ))}
+                {todayEvents.events.map(renderEvent)}
               </div>
             )}
           </div>
@@ -132,7 +209,7 @@ export function AgendaCalendar({ userId, profile }: AgendaCalendarProps) {
               <p className="text-[15px] text-[var(--ink-muted)]">Sem eventos futuros</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-4 pb-2">
               {/* OVERDUE */}
               {overdueVisits.length > 0 && (
                 <div className="flex flex-col gap-1.5">
@@ -143,14 +220,16 @@ export function AgendaCalendar({ userId, profile }: AgendaCalendarProps) {
                     {overdueVisits.map(visit => {
                       const date = parseISO(visit.next_visit_date!);
                       return (
-                        <div key={visit.id} className="pl-2.5 border-l-[3px] border-red-500 py-1 bg-red-50 dark:bg-red-950/20 rounded-r-md">
-                          <div className="text-[13px] font-bold text-red-600 dark:text-red-400 leading-tight truncate">
-                            {visit.contact_name}
+                        <Link key={visit.id} href={`/contatos/${visit.contact_id}`}>
+                          <div className="pl-2 border-l-[3px] border-red-500 py-1.5 bg-red-50 dark:bg-red-950/20 rounded-r-md hover:brightness-95 transition-all">
+                            <div className="text-[13px] font-bold text-red-600 dark:text-red-400 leading-tight truncate">
+                              {visit.contact_name}
+                            </div>
+                            <div className="text-[10px] font-medium text-red-500 leading-tight mt-0.5">
+                              Atrasada — era dia {format(date, "d/MM")}
+                            </div>
                           </div>
-                          <div className="text-[10px] font-medium text-red-500 leading-tight mt-0.5">
-                            Atrasada — era dia {format(date, "d/MM")}
-                          </div>
-                        </div>
+                        </Link>
                       );
                     })}
                   </div>
@@ -158,14 +237,14 @@ export function AgendaCalendar({ userId, profile }: AgendaCalendarProps) {
               )}
 
               {/* UPCOMING */}
-              {upcomingDaysWithEvents.slice(0, 3).map(({ date, plannedMins, dayVisits }) => (
+              {upcomingDaysWithEvents.slice(0, 3).map(({ date, plannedMins, events }) => (
                 <div key={date.toISOString()} className="flex flex-col gap-1.5">
                   <h4 className="text-[10px] sm:text-[11px] font-bold text-[var(--ink-muted)] uppercase tracking-wider">
                     {format(date, "EEEE, d 'DE' MMM.", { locale: ptBR })}
                   </h4>
                   <div className="space-y-1.5">
                     {plannedMins > 0 && (
-                      <div className="pl-2.5 border-l-[3px] border-[var(--accent)] py-1 bg-[var(--accent)]/10 rounded-r-md">
+                      <div className="pl-2 border-l-[3px] border-[var(--accent)] py-1.5 bg-[var(--accent)]/10 rounded-r-md">
                         <div className="text-[13px] font-bold text-[var(--accent)] leading-tight truncate">
                           Planejado
                         </div>
@@ -174,16 +253,7 @@ export function AgendaCalendar({ userId, profile }: AgendaCalendarProps) {
                         </div>
                       </div>
                     )}
-                    {dayVisits.map(visit => (
-                      <div key={visit.id} className="pl-2.5 border-l-[3px] border-[var(--success)] py-1 bg-[var(--success)]/10 rounded-r-md">
-                        <div className="text-[13px] font-bold text-[var(--success)] leading-tight truncate">
-                          Visita: {visit.contact_name}
-                        </div>
-                        <div className="text-[11px] font-medium text-[var(--success)] leading-tight mt-0.5">
-                          {format(parseISO(visit.next_visit_date!), "HH:mm")}
-                        </div>
-                      </div>
-                    ))}
+                    {events.map(renderEvent)}
                   </div>
                 </div>
               ))}
