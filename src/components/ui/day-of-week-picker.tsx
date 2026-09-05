@@ -40,7 +40,10 @@ export function DayOfWeekPicker({ value, onChange, maxDays }: DayOfWeekPickerPro
   };
 
   return (
-    <div className="flex items-center justify-between gap-1 w-full">
+    <div
+      className="flex items-center justify-between gap-1 w-full overflow-x-hidden"
+      style={{ touchAction: "pan-y" }}
+    >
       {DAYS.map((day) => {
         const isSelected = value.includes(day.id);
         const disabled = !isSelected && maxDays !== 1 && maxDays !== undefined && value.length >= maxDays;
