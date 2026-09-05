@@ -74,6 +74,30 @@ export interface SyncQueueItem {
 }
 
 // ─────────────────────────────────────────────────────────────
+// SyncError — records permanently failed sync operations.
+// Non-recoverable errors (4xx, schema mismatches, RLS violations)
+// are moved here instead of being silently discarded.
+// Client-side only (not mirrored in Supabase).
+// ─────────────────────────────────────────────────────────────
+
+export type SyncErrorReason =
+  | "rls_violation"       // 403 — RLS policy rejected the write
+  | "schema_mismatch"     // 400/422 — payload columns don't match DB schema
+  | "not_found"           // 404 — record doesn't exist to update/delete
+  | "conflict"            // 409 — FK violation or unique constraint
+  | "network_exhausted"   // Recoverable error (network) exceeded max retry attempts
+  | "unknown_permanent";  // Any other 4xx we don't recognise
+
+export interface SyncError {
+  id?: number; // auto-increment
+  original_item: SyncQueueItem;
+  reason: SyncErrorReason;
+  http_status?: number;
+  error_message: string;
+  failed_at: string; // ISO datetime
+}
+
+// ─────────────────────────────────────────────────────────────
 // Dexie database class
 // ─────────────────────────────────────────────────────────────
 
@@ -83,16 +107,28 @@ class KairosDB extends Dexie {
   visit_history!:  Table<VisitHistory>;
   profiles!:       Table<Profile>;
   sync_queue!:     Table<SyncQueueItem>;
+  sync_errors!:    Table<SyncError>;
 
   constructor() {
     super("kairos_db");
 
+    // v1 — original schema
     this.version(1).stores({
       daily_records: "id, user_id, date, category, synced",
       contacts:      "id, user_id, name, status, synced",
       visit_history: "id, contact_id, visit_date, next_visit_date, synced",
       profiles:      "id",
       sync_queue:    "++id, table_name, record_id, operation, created_at",
+    });
+
+    // v2 — adds sync_errors table for permanent failure audit trail
+    this.version(2).stores({
+      daily_records: "id, user_id, date, category, synced",
+      contacts:      "id, user_id, name, status, synced",
+      visit_history: "id, contact_id, visit_date, next_visit_date, synced",
+      profiles:      "id",
+      sync_queue:    "++id, table_name, record_id, operation, created_at",
+      sync_errors:   "++id, failed_at",
     });
   }
 }

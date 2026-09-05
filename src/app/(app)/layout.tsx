@@ -5,6 +5,7 @@ import { BottomNav } from "@/components/layout/bottom-nav";
 import { Toaster } from "sonner";
 import { usePathname } from "next/navigation";
 import { AppLockGate } from "@/components/security/app-lock-gate";
+import { PwaUpdatePrompt } from "@/components/pwa/update-prompt";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const isOnline = useOnlineSync();
@@ -37,6 +38,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             },
           }}
         />
+        <PwaUpdatePrompt />
       </div>
     </AppLockGate>
   );

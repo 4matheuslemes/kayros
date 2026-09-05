@@ -9,7 +9,8 @@ import { LetterMeetingShortcut } from "@/components/dashboard/letter-meeting-sho
 import { AgendaCalendar } from "@/components/dashboard/agenda-calendar";
 import { ReleaseNotesModal } from "@/components/dashboard/release-notes-modal";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
-import { useMonthRecords, useDailyRecords, useContacts, useUpcomingVisits } from "@/lib/db/hooks";
+import { DailyEncouragement } from "@/components/dashboard/daily-encouragement";
+import { useDashboardData } from "@/lib/db/hooks";
 import type { Profile } from "@/lib/db/dexie";
 
 interface DashboardClientProps {
@@ -18,10 +19,7 @@ interface DashboardClientProps {
 }
 
 export function DashboardClient({ userId, profile }: DashboardClientProps) {
-  const { totalMinutes, refresh: refreshMonth } = useMonthRecords(userId);
-  const { records, refresh: refreshDaily }      = useDailyRecords(userId);
-  const { contacts }                            = useContacts(userId);
-  const upcoming         = useUpcomingVisits(userId, 3);
+  const { totalMinutes, contacts, refresh } = useDashboardData(userId);
 
   const revisitas     = contacts.filter((c) => c.status === "revisita").length;
   const estudosAtivos = contacts.filter((c) => c.status === "estudo_ativo").length;
@@ -34,11 +32,13 @@ export function DashboardClient({ userId, profile }: DashboardClientProps) {
     <div className="flex flex-col gap-4">
       <AppHeader
         title={`${greeting}, ${firstName}`}
-        subtitle={profile.congregation_name ?? undefined}
         right={<ThemeToggle />}
+        className="pb-1"
       />
 
-      <div className="flex gap-2 -mt-2">
+      <DailyEncouragement />
+
+      <div className="flex gap-2 mt-1">
         <Link 
           href="/contatos?status=revisita" 
           className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] text-xs font-semibold hover:bg-[var(--primary)]/20 transition-colors"
@@ -59,10 +59,7 @@ export function DashboardClient({ userId, profile }: DashboardClientProps) {
 
       <HoursRegistrationCard 
         userId={userId} 
-        onRecordSaved={() => {
-          refreshMonth();
-          refreshDaily();
-        }}
+        onRecordSaved={refresh}
       />
 
       <MonthlyGoalCard
