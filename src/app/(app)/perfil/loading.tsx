@@ -1,11 +1,11 @@
-import { AppHeader } from "@/components/layout/app-header";
 import { Card } from "@/components/ui/card";
 import { User } from "lucide-react";
 
 export default function Loading() {
   return (
     <div className="flex flex-col gap-5">
-      <AppHeader title="Perfil" subtitle="..." />
+      {/* Header placeholder — no title text to flash */}
+      <div className="h-[72px]" />
 
       <Card>
         <div className="flex items-center gap-2 mb-5">

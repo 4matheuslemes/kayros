@@ -1,9 +1,9 @@
-import { AppHeader } from "@/components/layout/app-header";
 
 export default function Loading() {
   return (
     <div className="flex flex-col gap-4">
-      <AppHeader title="..." subtitle="..." />
+      {/* Header placeholder — neutral height, no title text to flash */}
+      <div className="h-[72px]" />
 
       {/* Main cards skeleton */}
       <div className="w-full h-[140px] bg-[var(--surface)] border border-[var(--border)] rounded-2xl animate-pulse" />

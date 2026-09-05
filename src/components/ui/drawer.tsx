@@ -28,10 +28,25 @@ export function Drawer({ open, onClose, title, description, children, className 
     return () => document.removeEventListener("keydown", handler);
   }, [open, onClose]);
 
-  // Lock body scroll when open
+  // Lock scroll when open.
+  // Targets BOTH document.body AND the app's real scroll container (<main>),
+  // which is overflow-y-auto. Without locking <main>, swipe gestures on the
+  // sheet propagate to the page behind it on iOS/Android — making the sheet
+  // appear to drag when the page is actually scrolling.
   React.useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
+    if (!open) return;
+
+    const main = document.querySelector("main");
+    const prevBodyOverflow = document.body.style.overflow;
+    const prevMainOverflow = main?.style.overflow ?? "";
+
+    document.body.style.overflow = "hidden";
+    if (main) main.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = prevBodyOverflow;
+      if (main) main.style.overflow = prevMainOverflow;
+    };
   }, [open]);
 
   if (!open) return null;
@@ -53,9 +68,17 @@ export function Drawer({ open, onClose, title, description, children, className 
           "animate-[slide-up_0.25s_cubic-bezier(0.32,0.72,0,1)]",
           className
         )}
+        // Prevent touch events on the sheet content from propagating to the
+        // page behind — eliminates the "content dragging" effect on mobile.
+        onTouchMove={(e) => e.stopPropagation()}
       >
-        {/* Drag handle */}
-        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-[var(--border)]" aria-hidden />
+        {/* Drag handle — touch-action:none so the browser doesn't try to
+            scroll the page when the user touches this specific element */}
+        <div
+          className="mx-auto mb-4 h-1 w-10 rounded-full bg-[var(--border)] cursor-grab"
+          style={{ touchAction: "none" }}
+          aria-hidden
+        />
 
         {/* Header */}
         {(title || description) && (

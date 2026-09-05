@@ -48,7 +48,7 @@ export function BottomNav() {
           <Link
             key={href}
             href={href}
-            onPointerDown={() => {
+            onClick={() => {
               lightTap();
               setOptimisticPath(href);
             }}

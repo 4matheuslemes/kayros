@@ -1,18 +1,9 @@
-import { AppHeader } from "@/components/layout/app-header";
-import { Plus, Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 export default function Loading() {
   return (
     <div className="flex flex-col gap-4">
-      <AppHeader
-        title="Interessados"
-        right={
-          <Button variant="primary" size="icon" disabled>
-            <Plus size={20} />
-          </Button>
-        }
-      />
+      {/* Header placeholder — no title text to flash */}
+      <div className="h-[72px]" />
 
       {/* Search Skeleton */}
       <div className="relative">
