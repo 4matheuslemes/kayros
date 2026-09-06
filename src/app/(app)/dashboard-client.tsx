@@ -10,6 +10,7 @@ import { AgendaCalendar } from "@/components/dashboard/agenda-calendar";
 import { ReleaseNotesModal } from "@/components/dashboard/release-notes-modal";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { DailyEncouragement } from "@/components/dashboard/daily-encouragement";
+import { SyncStatusIndicator } from "@/components/layout/sync-status-indicator";
 import { useDashboardData } from "@/lib/db/hooks";
 import type { Profile } from "@/lib/db/dexie";
 
@@ -32,7 +33,12 @@ export function DashboardClient({ userId, profile }: DashboardClientProps) {
     <div className="flex flex-col gap-4">
       <AppHeader
         title={`${greeting}, ${firstName}`}
-        right={<ThemeToggle />}
+        right={
+          <>
+            <SyncStatusIndicator />
+            <ThemeToggle />
+          </>
+        }
         className="pb-1"
       />
 
