@@ -17,6 +17,7 @@ export const ACTIVITY_CATEGORIES = [
   { value: "testemunho_publico", label: "Testemunho Público" },
   { value: "ldc", label: "LDC" },
   { value: "carta", label: "Carta" },
+  { value: "estudo_biblico", label: "Estudo Bíblico" },
 ] as const;
 
 export const ACTIVITY_COLORS: Record<string, string> = {
@@ -24,6 +25,7 @@ export const ACTIVITY_COLORS: Record<string, string> = {
   "testemunho_publico": "bg-emerald-500",
   "ldc": "bg-amber-500",
   "carta": "bg-purple-500",
+  "estudo_biblico": "bg-indigo-500",
 };
 
 export type ActivityCategory =
