@@ -2,14 +2,14 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TimerDisplay } from "@/components/hours/timer-display";
 import { TimerControls } from "@/components/hours/timer-controls";
 import { SaveRecordSheet } from "@/components/hours/save-record-sheet";
 import { ManualEntryForm } from "@/components/hours/manual-entry-form";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import { useTimer } from "@/hooks/use-timer";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface HoursRegistrationCardProps {
   userId: string;
@@ -20,8 +20,8 @@ export function HoursRegistrationCard({ userId, onRecordSaved }: HoursRegistrati
   const router = useRouter();
   const searchParams = useSearchParams();
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [tab, setTab] = useState<"timer" | "manual">("timer");
-  const { timerState, elapsed, elapsedMinutes, start, pause, resume, finish, reset } = useTimer();
+  const [mode, setMode] = useState<"timer" | "manual">("timer");
+  const { timerState, elapsed, elapsedMinutes, startedAt, start, pause, resume, finish, reset } = useTimer();
   const startedRef = useRef(false);
 
   useEffect(() => {
@@ -42,25 +42,29 @@ export function HoursRegistrationCard({ userId, onRecordSaved }: HoursRegistrati
     onRecordSaved();
   };
 
+  const todayStr = format(new Date(), "EEEE '·' dd MMM", { locale: ptBR }).toUpperCase();
+
   return (
     <>
-      <Card className="overflow-hidden">
-        <CardHeader className="mb-3">
-          <CardTitle className="flex items-center gap-2">
-            <Clock size={18} className="text-[var(--primary)]" />
-            Registrar Horas
-          </CardTitle>
-        </CardHeader>
+      <Card className="overflow-hidden relative shadow-sm border-[var(--border)]">
+        <div className="p-5 flex flex-col gap-2">
+          {/* Top row: Date + Mode Toggle */}
+          <div className="flex items-center justify-between pb-2">
+            <div className="text-xs font-semibold tracking-widest text-[var(--ink-muted)]">
+              {todayStr}
+            </div>
+            
+            <button
+              onClick={() => setMode(mode === "timer" ? "manual" : "timer")}
+              className="text-xs font-medium bg-transparent border border-[var(--border)] text-[var(--ink-muted)] px-3.5 py-1.5 rounded-full transition-colors hover:border-[var(--ink-muted)]"
+            >
+              {mode === "timer" ? "Manual" : "Cronômetro"}
+            </button>
+          </div>
 
-        <div className="w-full">
-          <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="w-full">
-            <TabsList className="w-full mb-4">
-              <TabsTrigger value="timer" className="flex-1">Cronômetro</TabsTrigger>
-              <TabsTrigger value="manual" className="flex-1">Manual</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="timer" className="flex flex-col items-center gap-2 mt-0">
-              <TimerDisplay elapsed={elapsed} state={timerState} />
+          {mode === "timer" ? (
+            <div className="flex flex-col items-center">
+              <TimerDisplay elapsed={elapsed} state={timerState} startedAt={startedAt} />
               
               <TimerControls
                 state={timerState}
@@ -70,18 +74,18 @@ export function HoursRegistrationCard({ userId, onRecordSaved }: HoursRegistrati
                 onFinish={handleFinish}
                 onReset={reset}
               />
-            </TabsContent>
-
-            <TabsContent value="manual" className="mt-0 pt-2">
+            </div>
+          ) : (
+            <div className="pt-4">
               <ManualEntryForm 
                 userId={userId} 
                 onSaved={() => {
                   onRecordSaved();
-                  setTab("timer");
+                  setMode("timer");
                 }} 
               />
-            </TabsContent>
-          </Tabs>
+            </div>
+          )}
         </div>
       </Card>
 

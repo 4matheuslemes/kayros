@@ -154,6 +154,7 @@ export function useTimer() {
     timerState,
     elapsed, // seconds
     elapsedMinutes: Math.floor(elapsed / 60),
+    startedAt: startedAtRef.current,
     start,
     pause,
     resume,
