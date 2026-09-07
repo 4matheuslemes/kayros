@@ -15,7 +15,7 @@ interface PersistedTimer {
 function loadFromStorage(): PersistedTimer {
   if (typeof window === "undefined") return { state: "idle", elapsed: 0, startedAt: null };
   try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { state: "idle", elapsed: 0, startedAt: null };
     return JSON.parse(raw) as PersistedTimer;
   } catch {
@@ -25,16 +25,16 @@ function loadFromStorage(): PersistedTimer {
 
 function saveToStorage(data: PersistedTimer) {
   if (typeof window === "undefined") return;
-  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
 function clearStorage() {
   if (typeof window === "undefined") return;
-  sessionStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(STORAGE_KEY);
 }
 
 /**
- * useTimer — persists across tab navigation via sessionStorage.
+ * useTimer — persists across tab navigation via localStorage.
  * Returns elapsed seconds (accurate even after resume).
  */
 export function useTimer() {
@@ -43,8 +43,27 @@ export function useTimer() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startedAtRef = useRef<number | null>(null);
   const baseElapsedRef = useRef<number>(0);
+  const timerStateRef = useRef<TimerState>("idle");
 
-  // Hydrate from sessionStorage on mount
+  useEffect(() => {
+    timerStateRef.current = timerState;
+  }, [timerState]);
+
+  const updateElapsed = useCallback(() => {
+    if (timerStateRef.current === "running" && startedAtRef.current) {
+      const now = Date.now();
+      const extra = Math.floor((now - startedAtRef.current) / 1000);
+      const total = baseElapsedRef.current + extra;
+      setElapsed(total);
+      saveToStorage({
+        state: "running",
+        elapsed: baseElapsedRef.current,
+        startedAt: startedAtRef.current,
+      });
+    }
+  }, []);
+
+  // Hydrate from localStorage on mount
   useEffect(() => {
     const persisted = loadFromStorage();
     baseElapsedRef.current = persisted.elapsed;
@@ -62,22 +81,11 @@ export function useTimer() {
     }
   }, []);
 
-  // Tick when running
+  // Tick when running (every 30 seconds for progress text update)
   useEffect(() => {
     if (timerState === "running") {
-      intervalRef.current = setInterval(() => {
-        const now = Date.now();
-        const extra = startedAtRef.current
-          ? Math.floor((now - startedAtRef.current) / 1000)
-          : 0;
-        const total = baseElapsedRef.current + extra;
-        setElapsed(total);
-        saveToStorage({
-          state: "running",
-          elapsed: baseElapsedRef.current,
-          startedAt: startedAtRef.current,
-        });
-      }, 1000);
+      updateElapsed();
+      intervalRef.current = setInterval(updateElapsed, 30000);
     } else {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -87,7 +95,18 @@ export function useTimer() {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [timerState]);
+  }, [timerState, updateElapsed]);
+
+  // Handle visibility change (update elapsed immediately when app comes to foreground)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        updateElapsed();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [updateElapsed]);
 
   const start = useCallback(() => {
     startedAtRef.current = Date.now();
