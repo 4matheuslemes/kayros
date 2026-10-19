@@ -58,6 +58,7 @@ export interface Profile {
   onboarding_completed: boolean;
   meeting_link?: string;
   is_admin?: boolean;
+  is_elder?: boolean;
   weekly_schedule?: Record<string, number>;
 }
 

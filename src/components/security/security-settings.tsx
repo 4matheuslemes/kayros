@@ -18,6 +18,7 @@ async function hashPin(pin: string): Promise<string> {
 
 export function SecuritySettings() {
   const [hasPin, setHasPin] = useState(false);
+  const [isLockEnabled, setIsLockEnabled] = useState(false);
   const [hasBiometrics, setHasBiometrics] = useState(false);
   const [biometricsAvailable, setBiometricsAvailable] = useState(false);
 
@@ -27,10 +28,12 @@ export function SecuritySettings() {
   const [step, setStep] = useState<"create" | "confirm">("create");
 
   useEffect(() => {
-    setHasPin(!!localStorage.getItem("app_pin_hash"));
+    const pin = !!localStorage.getItem("app_pin_hash");
+    setHasPin(pin);
+    setIsLockEnabled(pin && localStorage.getItem("app_lock_enabled") !== "false");
     setHasBiometrics(localStorage.getItem("app_biometrics") === "true");
 
-    if (window.PublicKeyCredential) {
+    if (typeof window !== "undefined" && window.PublicKeyCredential) {
       PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
         .then(available => setBiometricsAvailable(available));
     }
@@ -38,17 +41,31 @@ export function SecuritySettings() {
 
   const handleTogglePin = () => {
     if (hasPin) {
-      localStorage.removeItem("app_pin_hash");
-      localStorage.removeItem("app_biometrics");
-      setHasPin(false);
-      setHasBiometrics(false);
-      toast.success("Trava de acesso desativada");
+      if (isLockEnabled) {
+        localStorage.setItem("app_lock_enabled", "false");
+        setIsLockEnabled(false);
+        toast.success("Trava geral desativada (PIN mantido para áreas sensíveis)");
+      } else {
+        localStorage.setItem("app_lock_enabled", "true");
+        setIsLockEnabled(true);
+        toast.success("Trava de acesso ativada");
+      }
     } else {
       setStep("create");
       setPinInput("");
       setPinConfirm("");
       setPinModalOpen(true);
     }
+  };
+
+  const handleRemovePin = () => {
+    localStorage.removeItem("app_pin_hash");
+    localStorage.removeItem("app_lock_enabled");
+    localStorage.removeItem("app_biometrics");
+    setHasPin(false);
+    setIsLockEnabled(false);
+    setHasBiometrics(false);
+    toast.success("PIN removido com sucesso");
   };
 
   const handleSavePin = async () => {
@@ -59,7 +76,9 @@ export function SecuritySettings() {
       if (pinInput === pinConfirm) {
         const hash = await hashPin(pinInput);
         localStorage.setItem("app_pin_hash", hash);
+        localStorage.setItem("app_lock_enabled", "true");
         setHasPin(true);
+        setIsLockEnabled(true);
         setPinModalOpen(false);
         toast.success("PIN configurado com sucesso");
       } else {
@@ -121,11 +140,35 @@ export function SecuritySettings() {
         </div>
         <button
           onClick={handleTogglePin}
-          className={`w-11 h-6 rounded-full transition-colors relative shadow-inner ${hasPin ? 'bg-[var(--success)]' : 'bg-[var(--border)]'}`}
+          className={`w-11 h-6 rounded-full transition-colors relative shadow-inner ${isLockEnabled ? 'bg-[var(--success)]' : 'bg-[var(--border)]'}`}
         >
-          <div className={`w-5 h-5 bg-white rounded-full absolute shadow-sm transition-transform duration-200 ease-out ${hasPin ? 'translate-x-5' : 'translate-x-0.5'} top-0.5`} />
+          <div className={`w-5 h-5 bg-white rounded-full absolute shadow-sm transition-transform duration-200 ease-out ${isLockEnabled ? 'translate-x-5' : 'translate-x-0.5'} top-0.5`} />
         </button>
       </div>
+
+      {hasPin && (
+        <div className="flex items-center justify-between px-5 py-2 bg-[var(--surface)] border-t border-[var(--border)] text-caption">
+          <button
+            type="button"
+            onClick={() => {
+              setStep("create");
+              setPinInput("");
+              setPinConfirm("");
+              setPinModalOpen(true);
+            }}
+            className="text-[var(--primary)] font-medium hover:underline"
+          >
+            Alterar PIN
+          </button>
+          <button
+            type="button"
+            onClick={handleRemovePin}
+            className="text-red-500 font-medium hover:underline"
+          >
+            Remover PIN
+          </button>
+        </div>
+      )}
 
       {hasPin && biometricsAvailable && (
         <div className="flex items-center justify-between px-5 py-4 hover:bg-[var(--background)] transition-colors">

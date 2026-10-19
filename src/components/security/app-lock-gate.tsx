@@ -18,7 +18,8 @@ export function AppLockGate({ children }: { children: React.ReactNode }) {
   // Parse PIN on mount
   useEffect(() => {
     const pinHash = localStorage.getItem("app_pin_hash");
-    setHasPin(!!pinHash);
+    const lockEnabled = localStorage.getItem("app_lock_enabled") !== "false";
+    setHasPin(!!pinHash && lockEnabled);
     setHasBiometrics(localStorage.getItem("app_biometrics") === "true");
   }, []);
 
