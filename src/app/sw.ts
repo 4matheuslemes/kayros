@@ -11,8 +11,16 @@ declare global {
 }
 declare const self: ServiceWorkerGlobalScope;
 
+// Exclui chunks do módulo de discursos, Tiptap, ProseMirror e Tippy do precache inicial
+// para não sobrecarregar usuários sem acesso. O cache em tempo de execução (runtimeCaching)
+// cuidará de armazená-los sob demanda quando a rota for acessada.
+const precacheEntries = (self.__SW_MANIFEST || []).filter((entry) => {
+  const url = typeof entry === "string" ? entry : entry.url;
+  return !/discursos|tiptap|prosemirror|tippy|pdf/i.test(url);
+});
+
 const serwist = new Serwist({
-  precacheEntries: self.__SW_MANIFEST,
+  precacheEntries,
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: true,

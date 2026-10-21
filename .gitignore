@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# reference & local assets
+_rhema-ref/
+scripts/bible-source/

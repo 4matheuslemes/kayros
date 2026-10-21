@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Field } from "@/components/ui/input";
 import { APP_NAME } from "@/lib/constants";
+import { TalksAccessSection } from "@/components/admin/talks-access-section";
 
 const schema = z.object({
   email: z.string().email("E-mail inválido"),
@@ -156,6 +157,8 @@ export function InviteClient() {
           </div>
         )}
       </Card>
+
+      <TalksAccessSection />
     </div>
   );
 }

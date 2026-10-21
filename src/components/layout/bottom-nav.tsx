@@ -2,19 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
-import { Home, ScrollText, Users, User } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Home, ScrollText, Users, User, BookOpenText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { lightTap } from "@/lib/haptics";
 
-const NAV_ITEMS = [
-  { href: "/",           icon: Home,       label: "Início"    },
-  { href: "/historico",  icon: ScrollText, label: "Histórico" },
-  { href: "/contatos",   icon: Users,      label: "Interessados"  },
-  { href: "/perfil",     icon: User,       label: "Perfil"    },
-] as const;
+interface BottomNavProps {
+  talksAccess?: boolean;
+}
 
-export function BottomNav() {
+export function BottomNav({ talksAccess = false }: BottomNavProps) {
   const pathname = usePathname();
   const [optimisticPath, setOptimisticPath] = useState(pathname);
 
@@ -22,6 +19,25 @@ export function BottomNav() {
   useEffect(() => {
     setOptimisticPath(pathname);
   }, [pathname]);
+
+  const navItems = useMemo(() => {
+    const items = [
+      { href: "/", icon: Home, label: "Início" },
+      { href: "/historico", icon: ScrollText, label: "Histórico" },
+      { href: "/contatos", icon: Users, label: "Interessados" },
+    ];
+
+    if (talksAccess) {
+      items.push({
+        href: "/discursos",
+        icon: BookOpenText,
+        label: "Discursos",
+      });
+    }
+
+    items.push({ href: "/perfil", icon: User, label: "Perfil" });
+    return items;
+  }, [talksAccess]);
 
   return (
     <nav
@@ -38,7 +54,7 @@ export function BottomNav() {
       style={{ backgroundColor: "color-mix(in srgb, var(--surface) 97%, transparent)" }}
       aria-label="Navegação principal"
     >
-      {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
+      {navItems.map(({ href, icon: Icon, label }) => {
         const active =
           href === "/"
             ? optimisticPath === "/"
@@ -53,7 +69,7 @@ export function BottomNav() {
               setOptimisticPath(href);
             }}
             className={cn(
-              "flex-1 flex flex-col items-center justify-center gap-1",
+              "flex-1 flex flex-col items-center justify-center gap-1 px-0.5",
               "min-h-[44px] transition-all duration-100 active:scale-90",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)]",
               active
@@ -70,7 +86,7 @@ export function BottomNav() {
               size={22}
               strokeWidth={active ? 2.25 : 1.75}
             />
-            <span className="text-2xs font-medium font-sans leading-none">
+            <span className="text-2xs font-medium font-sans leading-none tracking-tight truncate max-w-full text-center">
               {label}
             </span>
           </Link>

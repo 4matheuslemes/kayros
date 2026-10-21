@@ -59,6 +59,7 @@ export interface Profile {
   meeting_link?: string;
   is_admin?: boolean;
   is_elder?: boolean;
+  talks_access?: boolean;
   weekly_schedule?: Record<string, number>;
 }
 
