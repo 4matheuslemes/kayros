@@ -1,14 +1,24 @@
+"use client";
+
 import { type ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { NavMenu } from "./nav-menu";
 
 interface AppHeaderProps {
   title: string;
   subtitle?: string;
   right?: ReactNode;
   className?: string;
+  hideMenu?: boolean;
 }
 
-export function AppHeader({ title, subtitle, right, className }: AppHeaderProps) {
+export function AppHeader({
+  title,
+  subtitle,
+  right,
+  className,
+  hideMenu = false,
+}: AppHeaderProps) {
   return (
     <header
       className={cn(
@@ -25,8 +35,9 @@ export function AppHeader({ title, subtitle, right, className }: AppHeaderProps)
           <p className="text-caption text-[var(--ink-muted)] mt-0.5">{subtitle}</p>
         )}
       </div>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2 shrink-0">
         {right}
+        {!hideMenu && <NavMenu />}
       </div>
     </header>
   );

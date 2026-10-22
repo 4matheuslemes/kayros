@@ -7,6 +7,10 @@ export const APP_NAME = "Kairós" as const;
 export const APP_DESCRIPTION = "Registro pessoal de atividade de pregação";
 export const APP_SLUG = "kairos" as const;
 
+// IDs possíveis: "inicio" | "interessados" | "historico" | "discursos"
+// Array vazio = a barra flutuante some por completo (e o espaço inferior reservado volta a 0).
+export const FLOATING_NAV_ITEMS = ["inicio", "interessados"] as const;
+
 // Service year starts in September (month index 8, 0-based)
 export const SERVICE_YEAR_START_MONTH = 9; // 1-based: September
 

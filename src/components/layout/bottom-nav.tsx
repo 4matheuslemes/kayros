@@ -3,13 +3,26 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useMemo } from "react";
-import { Home, ScrollText, Users, User, BookOpenText } from "lucide-react";
+import { Home, ScrollText, Users, BookOpenText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { lightTap } from "@/lib/haptics";
+import { FLOATING_NAV_ITEMS } from "@/lib/constants";
 
 interface BottomNavProps {
   talksAccess?: boolean;
 }
+
+const FLOATING_ITEM_CONFIG = {
+  inicio: { href: "/", icon: Home, label: "Início" },
+  interessados: { href: "/contatos", icon: Users, label: "Interessados" },
+  historico: { href: "/historico", icon: ScrollText, label: "Histórico" },
+  discursos: {
+    href: "/discursos",
+    icon: BookOpenText,
+    label: "Discursos",
+    requiresTalksAccess: true,
+  },
+} as const;
 
 export function BottomNav({ talksAccess = false }: BottomNavProps) {
   const pathname = usePathname();
@@ -21,30 +34,23 @@ export function BottomNav({ talksAccess = false }: BottomNavProps) {
   }, [pathname]);
 
   const navItems = useMemo(() => {
-    const items = [
-      { href: "/", icon: Home, label: "Início" },
-      { href: "/historico", icon: ScrollText, label: "Histórico" },
-      { href: "/contatos", icon: Users, label: "Interessados" },
-    ];
-
-    if (talksAccess) {
-      items.push({
-        href: "/discursos",
-        icon: BookOpenText,
-        label: "Discursos",
-      });
-    }
-
-    items.push({ href: "/perfil", icon: User, label: "Perfil" });
-    return items;
+    return FLOATING_NAV_ITEMS.map((id) => FLOATING_ITEM_CONFIG[id])
+      .filter(Boolean)
+      .filter((item) => !("requiresTalksAccess" in item && item.requiresTalksAccess && !talksAccess));
   }, [talksAccess]);
+
+  if (navItems.length === 0) {
+    return null;
+  }
+
+  const isCompact = navItems.length <= 2;
 
   return (
     <nav
       className={cn(
         "fixed z-40",
         "bottom-[calc(env(safe-area-inset-bottom)+1rem)]",
-        "left-4 right-4 mx-auto max-w-md",
+        isCompact ? "left-0 right-0 mx-auto w-fit min-w-[180px] max-w-xs px-2" : "left-4 right-4 mx-auto max-w-md",
         "border border-black/10 dark:border-white/15 rounded-full",
         "shadow-[0_8px_30px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.8)]",
         "dark:shadow-[0_8px_30px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.15)]",
@@ -64,13 +70,15 @@ export function BottomNav({ talksAccess = false }: BottomNavProps) {
           <Link
             key={href}
             href={href}
+            prefetch={true}
             onClick={() => {
               lightTap();
               setOptimisticPath(href);
             }}
             className={cn(
-              "flex-1 flex flex-col items-center justify-center gap-1 px-0.5",
-              "min-h-[44px] transition-all duration-100 active:scale-90",
+              "flex-1 flex flex-col items-center justify-center gap-1",
+              isCompact ? "px-5" : "px-0.5",
+              "min-h-[44px] min-w-[64px] transition-all duration-100 active:scale-90",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)]",
               active
                 ? "text-[var(--primary)]"

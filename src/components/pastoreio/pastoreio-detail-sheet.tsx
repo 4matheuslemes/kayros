@@ -14,6 +14,8 @@ interface PastoreioDetailSheetProps {
   onClose: () => void;
   onEdit: (visit: ShepherdingVisit) => void;
   onDelete: (visitId: string) => Promise<void>;
+  linkedMemberName?: string | null;
+  linkedCompanionName?: string | null;
 }
 
 export function PastoreioDetailSheet({
@@ -22,11 +24,16 @@ export function PastoreioDetailSheet({
   onClose,
   onEdit,
   onDelete,
+  linkedMemberName,
+  linkedCompanionName,
 }: PastoreioDetailSheetProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   if (!visit) return null;
+
+  const displayPerson = linkedMemberName || visit.family_or_person;
+  const displayCompanion = linkedCompanionName || visit.companion;
 
   const formattedDate = (() => {
     try {
@@ -65,7 +72,7 @@ export function PastoreioDetailSheet({
     <Drawer
       open={open}
       onClose={handleClose}
-      title={visit.family_or_person}
+      title={displayPerson}
       description="Visita de pastoreio registrada"
     >
       <div className="flex flex-col gap-5 mt-2">
@@ -77,11 +84,11 @@ export function PastoreioDetailSheet({
             <span>{formattedDate}</span>
           </div>
 
-          {visit.companion && (
+          {displayCompanion && (
             <div className="flex items-center gap-2 text-body-sm text-[var(--ink)]">
               <Users size={15} className="text-[var(--ink-muted)] shrink-0" />
               <span className="font-medium">Acompanhado por:</span>
-              <span>{visit.companion}</span>
+              <span>{displayCompanion}</span>
             </div>
           )}
 

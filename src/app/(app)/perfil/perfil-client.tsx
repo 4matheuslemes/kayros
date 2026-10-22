@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { LogOut, User, FileText, CalendarDays, Settings, HeartHandshake } from "lucide-react";
+import { LogOut, User, FileText, CalendarDays, Settings, HeartHandshake, Users } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/app-header";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
@@ -387,16 +387,28 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
             </div>
           </Link>
           {profile.is_elder && (
-            <Link
-              href="/pastoreio"
-              className="flex items-center gap-3 px-5 py-4 hover:bg-[var(--background)] transition-colors text-body-sm text-[var(--ink)]"
-            >
-              <HeartHandshake size={16} className="text-[var(--primary)]" />
-              <div className="text-left">
-                <span className="text-body-sm font-medium text-[var(--ink)] block leading-tight">Registro de Pastoreio</span>
-                <span className="text-caption text-[var(--ink-muted)] mt-0.5 block">Visitas pastorais confidenciais</span>
-              </div>
-            </Link>
+            <>
+              <Link
+                href="/pastoreio"
+                className="flex items-center gap-3 px-5 py-4 hover:bg-[var(--background)] transition-colors text-body-sm text-[var(--ink)]"
+              >
+                <HeartHandshake size={16} className="text-[var(--primary)]" />
+                <div className="text-left">
+                  <span className="text-body-sm font-medium text-[var(--ink)] block leading-tight">Registro de Pastoreio</span>
+                  <span className="text-caption text-[var(--ink-muted)] mt-0.5 block">Visitas pastorais confidenciais</span>
+                </div>
+              </Link>
+              <Link
+                href="/irmaos"
+                className="flex items-center gap-3 px-5 py-4 hover:bg-[var(--background)] transition-colors text-body-sm text-[var(--ink)]"
+              >
+                <Users size={16} className="text-[var(--primary)]" />
+                <div className="text-left">
+                  <span className="text-body-sm font-medium text-[var(--ink)] block leading-tight">Irmãos</span>
+                  <span className="text-caption text-[var(--ink-muted)] mt-0.5 block">Cadastro e histórico de congregação</span>
+                </div>
+              </Link>
+            </>
           )}
           {profile.is_admin && (
             <Link

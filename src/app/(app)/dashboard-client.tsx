@@ -8,7 +8,6 @@ import { HoursRegistrationCard } from "@/components/dashboard/hours-registration
 import { LetterMeetingShortcut } from "@/components/dashboard/letter-meeting-shortcut";
 import { AgendaCalendar } from "@/components/dashboard/agenda-calendar";
 import { ReleaseNotesModal } from "@/components/dashboard/release-notes-modal";
-import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { DailyEncouragement } from "@/components/dashboard/daily-encouragement";
 import { SyncStatusIndicator } from "@/components/layout/sync-status-indicator";
 import { useDashboardData } from "@/lib/db/hooks";
@@ -33,12 +32,7 @@ export function DashboardClient({ userId, profile }: DashboardClientProps) {
     <div className="flex flex-col gap-4">
       <AppHeader
         title={`${greeting}, ${firstName}`}
-        right={
-          <>
-            <SyncStatusIndicator />
-            <ThemeToggle />
-          </>
-        }
+        right={<SyncStatusIndicator />}
         className="pb-1"
       />
 

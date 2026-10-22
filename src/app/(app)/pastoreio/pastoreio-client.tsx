@@ -38,6 +38,7 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
   const [hasPinConfigured, setHasPinConfigured] = useState(false);
 
   const [visits, setVisits] = useState<ShepherdingVisit[]>([]);
+  const [membersMap, setMembersMap] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
 
@@ -59,22 +60,35 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
     }
   }, []);
 
-  // Fetch visits
+  // Fetch visits and members
   const fetchVisits = useCallback(async () => {
     setLoading(true);
     const supabase = createClient();
     try {
-      const { data, error } = await supabase
-        .from("shepherding_visits")
-        .select("*")
-        .order("visit_date", { ascending: false })
-        .order("created_at", { ascending: false });
+      const [visitsRes, membersRes] = await Promise.all([
+        supabase
+          .from("shepherding_visits")
+          .select("*")
+          .order("visit_date", { ascending: false })
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("congregation_members")
+          .select("id, full_name"),
+      ]);
 
-      if (error) {
-        console.error("Error fetching shepherding visits:", error);
+      if (membersRes.data) {
+        const mMap = new Map<string, string>();
+        for (const m of membersRes.data) {
+          mMap.set(m.id, m.full_name);
+        }
+        setMembersMap(mMap);
+      }
+
+      if (visitsRes.error) {
+        console.error("Error fetching shepherding visits:", visitsRes.error);
         toast.error("Não foi possível carregar as visitas");
       } else {
-        setVisits((data as ShepherdingVisit[]) || []);
+        setVisits((visitsRes.data as ShepherdingVisit[]) || []);
       }
     } catch (err) {
       console.error(err);
@@ -93,18 +107,23 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
     }
   }, [isUnlocked, fetchVisits, searchParams]);
 
-  // Filtered visits
+  // Filtered visits (considers both linked member names and legacy text fields)
   const filteredVisits = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return visits;
     return visits.filter((v) => {
+      const linkedPerson = v.member_id ? membersMap.get(v.member_id) : null;
+      const linkedCompanion = v.companion_member_id ? membersMap.get(v.companion_member_id) : null;
+
       return (
         v.family_or_person.toLowerCase().includes(q) ||
+        (linkedPerson && linkedPerson.toLowerCase().includes(q)) ||
         (v.companion && v.companion.toLowerCase().includes(q)) ||
+        (linkedCompanion && linkedCompanion.toLowerCase().includes(q)) ||
         (v.report && v.report.toLowerCase().includes(q))
       );
     });
-  }, [visits, query]);
+  }, [visits, query, membersMap]);
 
   // Handle Saved visit (create or edit)
   const handleSaved = (saved: ShepherdingVisit) => {
@@ -300,7 +319,7 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
                 <div className="flex flex-col gap-1.5 min-w-0 flex-1">
                   <div className="flex items-baseline justify-between gap-2">
                     <h3 className="font-display font-semibold text-base text-[var(--ink)] truncate group-hover:text-[var(--primary)] transition-colors">
-                      {visit.family_or_person}
+                      {(visit.member_id && membersMap.get(visit.member_id)) || visit.family_or_person}
                     </h3>
                   </div>
 
@@ -310,12 +329,14 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
                   </div>
 
                   {/* Discreet indicators for Companion and Next Visit */}
-                  {(visit.companion || formattedNext) && (
+                  {((visit.companion_member_id && membersMap.get(visit.companion_member_id)) || visit.companion || formattedNext) && (
                     <div className="flex flex-wrap items-center gap-2 mt-0.5">
-                      {visit.companion && (
+                      {(visit.companion_member_id || visit.companion) && (
                         <span className="inline-flex items-center gap-1 text-2xs text-[var(--ink-muted)] bg-[var(--background)] px-2 py-0.5 rounded-full border border-[var(--border)]">
                           <Users size={11} className="shrink-0" />
-                          <span className="truncate max-w-[120px]">{visit.companion}</span>
+                          <span className="truncate max-w-[140px]">
+                            {(visit.companion_member_id && membersMap.get(visit.companion_member_id)) || visit.companion}
+                          </span>
                         </span>
                       )}
 
@@ -355,6 +376,7 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
         }}
         userId={userId}
         initialData={editingVisit}
+        preselectedMemberId={searchParams.get("member_id")}
         onSaved={handleSaved}
       />
 
@@ -362,6 +384,8 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
       <PastoreioDetailSheet
         visit={detailVisit}
         open={!!detailVisit}
+        linkedMemberName={detailVisit?.member_id ? membersMap.get(detailVisit.member_id) : null}
+        linkedCompanionName={detailVisit?.companion_member_id ? membersMap.get(detailVisit.companion_member_id) : null}
         onClose={() => setDetailVisit(null)}
         onEdit={(visit) => {
           setEditingVisit(visit);
