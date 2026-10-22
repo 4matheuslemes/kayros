@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Users, CalendarClock, Pencil, Trash2, AlertTriangle } from "lucide-react";
+import { Calendar, Users, CalendarClock, Pencil, Trash2, AlertTriangle, UserCheck } from "lucide-react";
 import { Drawer } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import type { ShepherdingVisit } from "@/lib/types/pastoreio";
@@ -14,7 +14,7 @@ interface PastoreioDetailSheetProps {
   onClose: () => void;
   onEdit: (visit: ShepherdingVisit) => void;
   onDelete: (visitId: string) => Promise<void>;
-  linkedMemberName?: string | null;
+  visitedNames?: string[];
   linkedCompanionName?: string | null;
 }
 
@@ -24,7 +24,7 @@ export function PastoreioDetailSheet({
   onClose,
   onEdit,
   onDelete,
-  linkedMemberName,
+  visitedNames,
   linkedCompanionName,
 }: PastoreioDetailSheetProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -32,7 +32,8 @@ export function PastoreioDetailSheet({
 
   if (!visit) return null;
 
-  const displayPerson = linkedMemberName || visit.family_or_person;
+  const displayNames = visitedNames && visitedNames.length > 0 ? visitedNames : [visit.family_or_person];
+  const drawerTitle = displayNames.join(", ");
   const displayCompanion = linkedCompanionName || visit.companion;
 
   const formattedDate = (() => {
@@ -72,12 +73,32 @@ export function PastoreioDetailSheet({
     <Drawer
       open={open}
       onClose={handleClose}
-      title={displayPerson}
+      title={drawerTitle}
       description="Visita de pastoreio registrada"
     >
       <div className="flex flex-col gap-5 mt-2">
         {/* Metadados da visita */}
-        <div className="flex flex-col gap-2.5 bg-[var(--background)]/60 border border-[var(--border)] rounded-lg p-3.5">
+        <div className="flex flex-col gap-3 bg-[var(--background)]/60 border border-[var(--border)] rounded-lg p-3.5">
+          {/* Pessoas visitadas como chips */}
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-2 text-caption font-semibold uppercase tracking-wider text-[var(--ink-muted)]">
+              <Users size={14} className="text-[var(--primary)] shrink-0" />
+              <span>Quem foi visitado</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5 pl-0.5 pt-0.5">
+              {displayNames.map((name, i) => (
+                <span
+                  key={i}
+                  className="px-2.5 py-1 rounded-full text-xs font-medium bg-[var(--primary)]/10 text-[var(--primary)] border border-[var(--primary)]/20"
+                >
+                  {name}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="h-px bg-[var(--border)]/60 my-0.5" />
+
           <div className="flex items-center gap-2 text-body-sm text-[var(--ink)]">
             <Calendar size={15} className="text-[var(--primary)] shrink-0" />
             <span className="font-medium">Data:</span>
@@ -86,7 +107,7 @@ export function PastoreioDetailSheet({
 
           {displayCompanion && (
             <div className="flex items-center gap-2 text-body-sm text-[var(--ink)]">
-              <Users size={15} className="text-[var(--ink-muted)] shrink-0" />
+              <UserCheck size={15} className="text-[var(--ink-muted)] shrink-0" />
               <span className="font-medium">Acompanhado por:</span>
               <span>{displayCompanion}</span>
             </div>

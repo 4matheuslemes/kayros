@@ -11,6 +11,8 @@ export const APP_SLUG = "kairos" as const;
 // Array vazio = a barra flutuante some por completo (e o espaço inferior reservado volta a 0).
 export const FLOATING_NAV_ITEMS = ["inicio", "interessados"] as const;
 
+export const SHEPHERDING_REVISIT_MONTHS = 8;
+
 // Service year starts in September (month index 8, 0-based)
 export const SERVICE_YEAR_START_MONTH = 9; // 1-based: September
 

@@ -51,14 +51,22 @@ export function MemberDetailSheet({
       try {
         const supabase = createClient();
         const { data, error } = await supabase
-          .from("shepherding_visits")
-          .select("*")
-          .eq("member_id", member.id)
-          .order("visit_date", { ascending: false })
-          .order("created_at", { ascending: false });
+          .from("shepherding_visit_members")
+          .select("visit:shepherding_visits(*)")
+          .eq("member_id", member.id);
 
         if (!error && data && isMounted) {
-          setVisits(data as ShepherdingVisit[]);
+          const loadedVisits = (data || [])
+            .map((row: any) => row.visit)
+            .filter(Boolean) as ShepherdingVisit[];
+
+          loadedVisits.sort((a, b) => {
+            const dateCmp = b.visit_date.localeCompare(a.visit_date);
+            if (dateCmp !== 0) return dateCmp;
+            return (b.created_at || "").localeCompare(a.created_at || "");
+          });
+
+          setVisits(loadedVisits);
         }
       } catch (e) {
         console.error("Error loading visits for member:", e);

@@ -6,10 +6,11 @@ export interface ShepherdingVisit {
   companion?: string | null;
   next_visit_date?: string | null;
   report?: string | null;
-  member_id?: string | null;
   companion_member_id?: string | null;
+  other_people?: string[] | null;
   created_at: string;
   updated_at: string;
+  member_ids?: string[];
 }
 
 export interface ShepherdingVisitFormData {
@@ -18,6 +19,7 @@ export interface ShepherdingVisitFormData {
   companion?: string;
   next_visit_date?: string;
   report?: string;
-  member_id?: string | null;
   companion_member_id?: string | null;
+  other_people?: string[];
+  member_ids?: string[];
 }

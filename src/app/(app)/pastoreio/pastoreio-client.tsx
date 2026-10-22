@@ -11,7 +11,6 @@ import {
   Users,
   CalendarClock,
   ShieldAlert,
-  ChevronRight,
   ArrowLeft,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -39,6 +38,7 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
 
   const [visits, setVisits] = useState<ShepherdingVisit[]>([]);
   const [membersMap, setMembersMap] = useState<Map<string, string>>(new Map());
+  const [visitMembersMap, setVisitMembersMap] = useState<Map<string, string[]>>(new Map());
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
 
@@ -52,20 +52,18 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
     const hasPin = !!pin;
     setHasPinConfigured(hasPin);
     if (!hasPin) {
-      // If user never configured PIN/biometrics, do not block access
       setIsUnlocked(true);
     } else {
-      // Require unlock on entry
       setIsUnlocked(false);
     }
   }, []);
 
-  // Fetch visits and members
+  // Fetch visits, members, and visit_members link table
   const fetchVisits = useCallback(async () => {
     setLoading(true);
     const supabase = createClient();
     try {
-      const [visitsRes, membersRes] = await Promise.all([
+      const [visitsRes, membersRes, visitMembersRes] = await Promise.all([
         supabase
           .from("shepherding_visits")
           .select("*")
@@ -74,6 +72,9 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
         supabase
           .from("congregation_members")
           .select("id, full_name"),
+        supabase
+          .from("shepherding_visit_members")
+          .select("visit_id, member_id"),
       ]);
 
       if (membersRes.data) {
@@ -84,11 +85,25 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
         setMembersMap(mMap);
       }
 
+      const vMap = new Map<string, string[]>();
+      if (visitMembersRes.data) {
+        for (const vm of visitMembersRes.data) {
+          const current = vMap.get(vm.visit_id) || [];
+          current.push(vm.member_id);
+          vMap.set(vm.visit_id, current);
+        }
+        setVisitMembersMap(vMap);
+      }
+
       if (visitsRes.error) {
         console.error("Error fetching shepherding visits:", visitsRes.error);
         toast.error("Não foi possível carregar as visitas");
       } else {
-        setVisits((visitsRes.data as ShepherdingVisit[]) || []);
+        const loaded = (visitsRes.data || []).map((v: any) => ({
+          ...v,
+          member_ids: vMap.get(v.id) || [],
+        }));
+        setVisits(loaded as ShepherdingVisit[]);
       }
     } catch (err) {
       console.error(err);
@@ -107,26 +122,59 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
     }
   }, [isUnlocked, fetchVisits, searchParams]);
 
-  // Filtered visits (considers both linked member names and legacy text fields)
+  // Resolve all visited names for a visit (linked members + other_people, fallback to family_or_person)
+  const getVisitedNames = useCallback(
+    (visit: ShepherdingVisit): string[] => {
+      const linkedIds = visit.member_ids || visitMembersMap.get(visit.id) || [];
+      const memberNames = linkedIds
+        .map((id) => membersMap.get(id))
+        .filter(Boolean) as string[];
+
+      const others = visit.other_people || [];
+      const combined = [...memberNames, ...others];
+
+      if (combined.length > 0) return combined;
+      return visit.family_or_person ? [visit.family_or_person] : [];
+    },
+    [membersMap, visitMembersMap]
+  );
+
+  // Format visited names: up to 2 names and "+N" when more
+  const formatVisitedSummary = useCallback((names: string[]): string => {
+    if (names.length === 0) return "Sem identificação";
+    if (names.length <= 2) return names.join(", ");
+    return `${names.slice(0, 2).join(", ")} +${names.length - 2}`;
+  }, []);
+
+  // Filtered visits based on real-time search
   const filteredVisits = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return visits;
-    return visits.filter((v) => {
-      const linkedPerson = v.member_id ? membersMap.get(v.member_id) : null;
-      const linkedCompanion = v.companion_member_id ? membersMap.get(v.companion_member_id) : null;
 
-      return (
-        v.family_or_person.toLowerCase().includes(q) ||
-        (linkedPerson && linkedPerson.toLowerCase().includes(q)) ||
-        (v.companion && v.companion.toLowerCase().includes(q)) ||
-        (linkedCompanion && linkedCompanion.toLowerCase().includes(q)) ||
-        (v.report && v.report.toLowerCase().includes(q))
-      );
+    return visits.filter((v) => {
+      const visitedNames = getVisitedNames(v);
+      const namesMatch = visitedNames.some((name) => name.toLowerCase().includes(q));
+      const legacyMatch = v.family_or_person?.toLowerCase().includes(q);
+      const companionName = v.companion_member_id
+        ? membersMap.get(v.companion_member_id)
+        : v.companion;
+      const companionMatch = companionName?.toLowerCase().includes(q);
+      const reportMatch = v.report?.toLowerCase().includes(q);
+
+      return namesMatch || legacyMatch || companionMatch || reportMatch;
     });
-  }, [visits, query, membersMap]);
+  }, [visits, query, getVisitedNames, membersMap]);
 
   // Handle Saved visit (create or edit)
   const handleSaved = (saved: ShepherdingVisit) => {
+    if (saved.member_ids) {
+      setVisitMembersMap((prev) => {
+        const next = new Map(prev);
+        next.set(saved.id, saved.member_ids || []);
+        return next;
+      });
+    }
+
     setVisits((prev) => {
       const idx = prev.findIndex((v) => v.id === saved.id);
       if (idx >= 0) {
@@ -157,27 +205,38 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
 
     toast.success("Visita excluída com sucesso");
     setVisits((prev) => prev.filter((v) => v.id !== visitId));
+    setVisitMembersMap((prev) => {
+      const next = new Map(prev);
+      next.delete(visitId);
+      return next;
+    });
+
     if (detailVisit?.id === visitId) {
       setDetailVisit(null);
     }
   };
 
-  // Waiting for initial check
+  // State: Loading LockGate
   if (isUnlocked === null) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="w-6 h-6 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
-  // Locked gate
-  if (!isUnlocked) {
-    return <PastoreioLockGate onUnlock={() => setIsUnlocked(true)} />;
+  // State: Locked by PIN Gate
+  if (isUnlocked === false) {
+    return (
+      <div className="min-h-screen bg-[var(--background)]">
+        <AppHeader title="Pastoreio" />
+        <PastoreioLockGate onUnlock={() => setIsUnlocked(true)} />
+      </div>
+    );
   }
 
   return (
-    <div className="flex flex-col gap-5 pb-8">
+    <div className="flex flex-col gap-5 pb-8 max-w-xl mx-auto px-4 py-4">
       {/* Header */}
       <div>
         <Link
@@ -205,38 +264,30 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
         />
       </div>
 
-      {/* Security notice if no PIN configured */}
+      {/* Security alert if PIN is not configured */}
       {!hasPinConfigured && (
-        <div className="flex items-start gap-3 p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-lg text-body-sm text-[var(--ink)] animate-in fade-in duration-200">
-          <ShieldAlert size={18} className="text-amber-500 shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <span className="font-medium block leading-tight text-amber-900 dark:text-amber-200">
-              Proteja suas anotações
-            </span>
-            <p className="text-caption text-amber-800/80 dark:text-amber-300/80 mt-1">
-              Como as visitas de pastoreio contêm informações confidenciais, recomendamos configurar um PIN ou biometria no seu Perfil.
-            </p>
-            <Link
-              href="/perfil"
-              className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 dark:text-amber-300 mt-2 hover:underline"
-            >
-              Configurar PIN no Perfil &rarr;
+        <div className="flex items-start gap-3 p-3.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-body-sm text-amber-800 dark:text-amber-200">
+          <ShieldAlert size={18} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <div className="flex-1 text-xs">
+            <span className="font-semibold block mb-0.5">Proteção recomendada</span>
+            Para proteger as visitas contra olhares curiosos no aparelho, configure um PIN ou
+            biometria em{" "}
+            <Link href="/perfil" className="underline font-medium hover:opacity-80">
+              Perfil &gt; Bloqueio do aplicativo
             </Link>
+            .
           </div>
         </div>
       )}
 
-      {/* Search Input */}
+      {/* Search Bar */}
       {visits.length > 0 && (
         <div className="relative">
-          <Search
-            size={16}
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--ink-muted)] pointer-events-none"
-          />
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar por nome, acompanhante ou anotação..."
+            placeholder="Buscar por nome, acompanhante ou relatório..."
             className="pl-10 h-10 text-body-sm"
           />
         </div>
@@ -292,6 +343,9 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
           </div>
 
           {filteredVisits.map((visit) => {
+            const visitedNames = getVisitedNames(visit);
+            const displayTitle = formatVisitedSummary(visitedNames);
+
             const formattedDate = (() => {
               try {
                 return format(parseISO(visit.visit_date), "dd 'de' MMMM, yyyy", { locale: ptBR });
@@ -309,17 +363,21 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
               }
             })();
 
+            const companionDisplayName = visit.companion_member_id
+              ? membersMap.get(visit.companion_member_id) || visit.companion
+              : visit.companion;
+
             return (
               <button
                 key={visit.id}
                 type="button"
                 onClick={() => setDetailVisit(visit)}
-                className="w-full text-left bg-[var(--surface)] border border-[var(--border)] rounded-lg p-4 hover:border-[var(--primary)]/50 active:bg-[var(--background)] transition-all shadow-xs flex items-center justify-between gap-3 group"
+                className="w-full text-left bg-[var(--surface)] border border-[var(--border)] rounded-lg p-4 hover:border-[var(--primary)]/50 active:bg-[var(--background)] transition-all shadow-xs flex items-center justify-between gap-3 group cursor-pointer"
               >
                 <div className="flex flex-col gap-1.5 min-w-0 flex-1">
                   <div className="flex items-baseline justify-between gap-2">
                     <h3 className="font-display font-semibold text-base text-[var(--ink)] truncate group-hover:text-[var(--primary)] transition-colors">
-                      {(visit.member_id && membersMap.get(visit.member_id)) || visit.family_or_person}
+                      {displayTitle}
                     </h3>
                   </div>
 
@@ -328,14 +386,14 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
                     <span>{formattedDate}</span>
                   </div>
 
-                  {/* Discreet indicators for Companion and Next Visit */}
-                  {((visit.companion_member_id && membersMap.get(visit.companion_member_id)) || visit.companion || formattedNext) && (
+                  {/* Indicators for Companion and Next Visit */}
+                  {(companionDisplayName || formattedNext) && (
                     <div className="flex flex-wrap items-center gap-2 mt-0.5">
-                      {(visit.companion_member_id || visit.companion) && (
+                      {companionDisplayName && (
                         <span className="inline-flex items-center gap-1 text-2xs text-[var(--ink-muted)] bg-[var(--background)] px-2 py-0.5 rounded-full border border-[var(--border)]">
                           <Users size={11} className="shrink-0" />
                           <span className="truncate max-w-[140px]">
-                            {(visit.companion_member_id && membersMap.get(visit.companion_member_id)) || visit.companion}
+                            {companionDisplayName}
                           </span>
                         </span>
                       )}
@@ -348,26 +406,14 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
                       )}
                     </div>
                   )}
-
-                  {/* Snippet preview */}
-                  {visit.report && (
-                    <p className="text-caption text-[var(--ink-muted)] line-clamp-1 mt-0.5 italic">
-                      "{visit.report}"
-                    </p>
-                  )}
                 </div>
-
-                <ChevronRight
-                  size={18}
-                  className="text-[var(--ink-muted)] group-hover:text-[var(--primary)] transition-colors shrink-0"
-                />
               </button>
             );
           })}
         </div>
       )}
 
-      {/* Form Drawer (Create / Edit) */}
+      {/* Form Sheet (Create / Edit) */}
       <PastoreioFormSheet
         open={formOpen}
         onClose={() => {
@@ -380,18 +426,22 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
         onSaved={handleSaved}
       />
 
-      {/* Detail Drawer (View full report, edit trigger, delete) */}
+      {/* Detail Sheet */}
       <PastoreioDetailSheet
         visit={detailVisit}
         open={!!detailVisit}
-        linkedMemberName={detailVisit?.member_id ? membersMap.get(detailVisit.member_id) : null}
-        linkedCompanionName={detailVisit?.companion_member_id ? membersMap.get(detailVisit.companion_member_id) : null}
         onClose={() => setDetailVisit(null)}
         onEdit={(visit) => {
           setEditingVisit(visit);
           setFormOpen(true);
         }}
         onDelete={handleDelete}
+        visitedNames={detailVisit ? getVisitedNames(detailVisit) : []}
+        linkedCompanionName={
+          detailVisit?.companion_member_id
+            ? membersMap.get(detailVisit.companion_member_id)
+            : null
+        }
       />
     </div>
   );

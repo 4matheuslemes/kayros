@@ -28,4 +28,5 @@ export interface CongregationMemberFormData {
 export interface MemberWithLastVisit extends CongregationMember {
   last_visit_date: string | null;
   last_visit_companion: string | null;
+  next_visit_date: string | null;
 }

@@ -8,6 +8,7 @@ import {
   Search,
   ArrowUpDown,
   Calendar,
+  CalendarClock,
   Shield,
   ChevronRight,
   ArrowLeft,
@@ -15,7 +16,7 @@ import {
   Clock,
   Sparkles,
 } from "lucide-react";
-import { formatDistanceToNow, parseISO } from "date-fns";
+import { formatDistanceToNow, parseISO, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/app-header";
@@ -37,6 +38,7 @@ import type { ShepherdingVisit } from "@/lib/types/pastoreio";
 
 type FilterType =
   | "todos"
+  | "na_hora"
   | "anciaos"
   | "servos"
   | "pioneiros"
@@ -44,7 +46,7 @@ type FilterType =
   | "nao_batizados"
   | "arquivados";
 
-type SortType = "nome" | "tempo_sem_visita";
+type SortByType = "nome" | "tempo_sem_visita";
 
 interface IrmaosClientProps {
   userId: string;
@@ -52,23 +54,27 @@ interface IrmaosClientProps {
 
 export function IrmaosClient({ userId }: IrmaosClientProps) {
   const [isUnlocked, setIsUnlocked] = useState<boolean | null>(null);
-
   const [members, setMembers] = useState<MemberWithLastVisit[]>([]);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<FilterType>("todos");
-  const [sortBy, setSortBy] = useState<SortType>("nome");
 
-  // Sheets state
+  // Filtros e busca
+  const [filter, setFilter] = useState<FilterType>("todos");
+  const [query, setQuery] = useState("");
+  const [sortBy, setSortBy] = useState<SortByType>("nome");
+
+  // Painéis
   const [memberFormOpen, setMemberFormOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<CongregationMember | null>(null);
   const [selectedMember, setSelectedMember] = useState<MemberWithLastVisit | null>(null);
 
-  // Pastoreio sheets state
+  // Integração com visitas de pastoreio
   const [visitFormOpen, setVisitFormOpen] = useState(false);
-  const [visitMemberIdForNew, setVisitMemberIdForNew] = useState<string | null>(null);
+  const [preselectedMemberId, setPreselectedMemberId] = useState<string | null>(null);
   const [detailVisit, setDetailVisit] = useState<ShepherdingVisit | null>(null);
   const [editingVisit, setEditingVisit] = useState<ShepherdingVisit | null>(null);
+  const [detailVisitedNames, setDetailVisitedNames] = useState<string[]>([]);
+
+  const today = format(new Date(), "yyyy-MM-dd");
 
   // Check PIN / biometrics
   useEffect(() => {
@@ -80,23 +86,21 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
     }
   }, []);
 
-  // Fetch all members + compute last visit in a SINGLE aggregated pass
+  // Fetch all members + compute last visit and next visit in a SINGLE aggregated pass via shepherding_visit_members
   const fetchData = useCallback(async () => {
     setLoading(true);
     const supabase = createClient();
 
     try {
-      // Duas consultas paralelas: 1 para membros, 1 para todas as visitas (sem N+1!)
-      const [membersRes, visitsRes] = await Promise.all([
+      // Duas consultas paralelas: 1 para membros, 1 para vínculos de visitas com visita embutida
+      const [membersRes, visitMembersRes] = await Promise.all([
         supabase
           .from("congregation_members")
           .select("*")
           .order("full_name", { ascending: true }),
         supabase
-          .from("shepherding_visits")
-          .select("member_id, visit_date, companion")
-          .not("member_id", "is", null)
-          .order("visit_date", { ascending: false }),
+          .from("shepherding_visit_members")
+          .select("member_id, visit:shepherding_visits(id, visit_date, next_visit_date, created_at, companion, companion_member_id)"),
       ]);
 
       if (membersRes.error) {
@@ -105,14 +109,44 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
         return;
       }
 
-      // Mapa da maior visit_date para cada member_id (primeira ocorrência = mais recente)
-      const lastVisitMap = new Map<string, { visit_date: string; companion: string | null }>();
-      for (const v of visitsRes.data || []) {
-        if (v.member_id && !lastVisitMap.has(v.member_id)) {
-          lastVisitMap.set(v.member_id, {
-            visit_date: v.visit_date,
-            companion: v.companion || null,
+      // Mapa da visita mais recente para cada member_id (maior visit_date, desempatando por created_at)
+      interface MemberVisitSummary {
+        last_visit_date: string | null;
+        last_visit_companion: string | null;
+        next_visit_date: string | null;
+        created_at: string | null;
+      }
+
+      const lastVisitMap = new Map<string, MemberVisitSummary>();
+
+      for (const row of (visitMembersRes.data || []) as any[]) {
+        const memberId = row.member_id;
+        const v = row.visit;
+        if (!memberId || !v || !v.visit_date) continue;
+
+        const existing = lastVisitMap.get(memberId);
+        if (!existing) {
+          lastVisitMap.set(memberId, {
+            last_visit_date: v.visit_date,
+            last_visit_companion: v.companion || null,
+            next_visit_date: v.next_visit_date || null,
+            created_at: v.created_at || null,
           });
+        } else {
+          // Desempate por visit_date e created_at
+          const isNewer =
+            v.visit_date > (existing.last_visit_date || "") ||
+            (v.visit_date === existing.last_visit_date &&
+              (v.created_at || "") > (existing.created_at || ""));
+
+          if (isNewer) {
+            lastVisitMap.set(memberId, {
+              last_visit_date: v.visit_date,
+              last_visit_companion: v.companion || null,
+              next_visit_date: v.next_visit_date || null,
+              created_at: v.created_at || null,
+            });
+          }
         }
       }
 
@@ -120,8 +154,9 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
         const last = lastVisitMap.get(m.id);
         return {
           ...m,
-          last_visit_date: last?.visit_date || null,
-          last_visit_companion: last?.companion || null,
+          last_visit_date: last?.last_visit_date || null,
+          last_visit_companion: last?.last_visit_companion || null,
+          next_visit_date: last?.next_visit_date || null,
         };
       });
 
@@ -140,9 +175,57 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
     }
   }, [isUnlocked, fetchData]);
 
+  // Load visited names for detail visit sheet when opened
+  useEffect(() => {
+    if (!detailVisit) {
+      setDetailVisitedNames([]);
+      return;
+    }
+
+    let isMounted = true;
+    const loadVisitMembers = async () => {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from("shepherding_visit_members")
+          .select("member_id")
+          .eq("visit_id", detailVisit.id);
+
+        if (isMounted) {
+          const memberNames = (data || [])
+            .map((row: any) => members.find((m) => m.id === row.member_id)?.full_name)
+            .filter(Boolean) as string[];
+
+          const others = detailVisit.other_people || [];
+          const combined = [...memberNames, ...others];
+          if (combined.length > 0) {
+            setDetailVisitedNames(combined);
+          } else {
+            setDetailVisitedNames(
+              detailVisit.family_or_person ? [detailVisit.family_or_person] : []
+            );
+          }
+        }
+      } catch {
+        if (isMounted) {
+          setDetailVisitedNames(
+            detailVisit.family_or_person ? [detailVisit.family_or_person] : []
+          );
+        }
+      }
+    };
+
+    loadVisitMembers();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [detailVisit, members]);
+
   // Contagens para os chips de filtro
   const counts = useMemo(() => {
     let todos = 0;
+    let na_hora = 0;
     let anciaos = 0;
     let servos = 0;
     let pioneiros = 0;
@@ -157,6 +240,12 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
       }
 
       todos++;
+
+      // Na hora de visitar: próxima visita é hoje ou anterior (quem nunca recebeu visita tem next_visit_date nulo e não entra)
+      if (!m.is_self && m.next_visit_date && m.next_visit_date <= today) {
+        na_hora++;
+      }
+
       if (m.appointment === "anciao") anciaos++;
       if (m.appointment === "servo_ministerial") servos++;
       if (
@@ -169,8 +258,8 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
       if (m.service_status === "publicador_nao_batizado") nao_batizados++;
     }
 
-    return { todos, anciaos, servos, pioneiros, publicadores, nao_batizados, arquivados };
-  }, [members]);
+    return { todos, na_hora, anciaos, servos, pioneiros, publicadores, nao_batizados, arquivados };
+  }, [members, today]);
 
   // Lista filtrada e ordenada
   const filteredAndSortedMembers = useMemo(() => {
@@ -181,7 +270,9 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
       list = list.filter((m) => !m.active);
     } else {
       list = list.filter((m) => m.active);
-      if (filter === "anciaos") {
+      if (filter === "na_hora") {
+        list = list.filter((m) => !m.is_self && m.next_visit_date && m.next_visit_date <= today);
+      } else if (filter === "anciaos") {
         list = list.filter((m) => m.appointment === "anciao");
       } else if (filter === "servos") {
         list = list.filter((m) => m.appointment === "servo_ministerial");
@@ -228,7 +319,7 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
       // Padrão: Nome (A-Z)
       return a.full_name.localeCompare(b.full_name, "pt-BR");
     });
-  }, [members, filter, query, sortBy]);
+  }, [members, filter, query, sortBy, today]);
 
   // Formata a data relativa da última visita
   const formatLastVisit = (dateStr: string | null) => {
@@ -244,35 +335,49 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
     }
   };
 
+  // Formata a data da próxima visita
+  const formatNextVisit = (dateStr: string | null) => {
+    if (!dateStr) return null;
+    try {
+      return format(parseISO(dateStr), "dd/MM/yyyy");
+    } catch {
+      return dateStr;
+    }
+  };
+
   // Monta texto discreto das designações
   const formatDesignations = (m: MemberWithLastVisit) => {
     const parts: string[] = [];
     if (m.appointment === "anciao") parts.push("Ancião");
-    else if (m.appointment === "servo_ministerial") parts.push("Servo ministerial");
+    if (m.appointment === "servo_ministerial") parts.push("Servo ministerial");
 
     if (m.service_status === "pioneiro_regular") parts.push("Pioneiro regular");
-    else if (m.service_status === "pioneiro_auxiliar_continuo") parts.push("Pioneiro auxiliar contínuo");
-    else if (m.service_status === "publicador_nao_batizado") parts.push("Não batizado");
-    else if (m.service_status === "publicador_batizado" && !m.appointment) parts.push("Publicador");
+    else if (m.service_status === "pioneiro_auxiliar_continuo")
+      parts.push("Pioneiro auxiliar contínuo");
+    else if (m.service_status === "publicador_nao_batizado")
+      parts.push("Não batizado");
 
-    return parts.join(" • ");
+    return parts.join(" · ");
   };
 
+  // Callback de membro salvo/atualizado
   const handleMemberSaved = (saved: CongregationMember) => {
     setMembers((prev) => {
-      const existing = prev.find((m) => m.id === saved.id);
-      if (existing) {
-        return prev.map((m) =>
-          m.id === saved.id
-            ? { ...m, ...saved }
-            : m
-        );
+      const idx = prev.findIndex((m) => m.id === saved.id);
+      if (idx >= 0) {
+        const updated = [...prev];
+        updated[idx] = {
+          ...updated[idx],
+          ...saved,
+        };
+        return updated;
       }
       return [
         {
           ...saved,
           last_visit_date: null,
           last_visit_companion: null,
+          next_visit_date: null,
         },
         ...prev,
       ];
@@ -283,18 +388,20 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
     }
   };
 
-  const handleMemberDeleted = (id: string) => {
-    setMembers((prev) => prev.filter((m) => m.id !== id));
-    if (selectedMember?.id === id) {
+  // Callback de membro excluído
+  const handleMemberDeleted = (deletedId: string) => {
+    setMembers((prev) => prev.filter((m) => m.id !== deletedId));
+    if (selectedMember?.id === deletedId) {
       setSelectedMember(null);
     }
   };
 
-  const handleVisitSaved = (_saved: ShepherdingVisit) => {
-    // Re-calcula para atualizar imediatamente a última visita
+  // Callback ao salvar nova visita a partir da ficha do irmão
+  const handleVisitSaved = () => {
     fetchData();
   };
 
+  // Callback de exclusão de visita
   const handleDeleteVisit = async (visitId: string) => {
     const supabase = createClient();
     const { error } = await supabase
@@ -308,15 +415,13 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
     }
 
     toast.success("Visita excluída com sucesso");
-    if (detailVisit?.id === visitId) {
-      setDetailVisit(null);
-    }
+    setDetailVisit(null);
     fetchData();
   };
 
   if (isUnlocked === null) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="w-6 h-6 border-2 border-[var(--primary)] border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -360,23 +465,14 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
         />
       </div>
 
-      <div className="flex items-center justify-between">
-        <span className="text-caption text-[var(--ink-muted)]">
-          Total de {members.length} cadastrados
-        </span>
-        <span className="text-2xs font-semibold px-2 py-0.5 rounded-full bg-[var(--surface)] text-[var(--ink-muted)] border border-[var(--border)]">
-          Acesso Restrito
-        </span>
-      </div>
-
-      <div className="space-y-3.5">
-
-        {/* ── BARRA DE BUSCA + TOGGLE DE ORDENAÇÃO ── */}
+      {/* ── BARRA DE CONTROLE: BUSCA E ORDENAÇÃO ── */}
+      <div className="flex flex-col gap-3">
         <div className="flex items-center gap-2">
+          {/* Busca por nome */}
           <div className="relative flex-1">
             <Search
               size={16}
-              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--ink-muted)]"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)] pointer-events-none"
             />
             <Input
               type="text"
@@ -389,7 +485,7 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
               <button
                 type="button"
                 onClick={() => setQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)] hover:text-[var(--ink)]"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--ink-muted)] hover:text-[var(--ink)] cursor-pointer"
                 aria-label="Limpar busca"
               >
                 <X size={15} />
@@ -423,6 +519,7 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-none">
           {[
             { id: "todos", label: "Todos", count: counts.todos },
+            { id: "na_hora", label: "Na hora de visitar", count: counts.na_hora },
             { id: "anciaos", label: "Anciãos", count: counts.anciaos },
             { id: "servos", label: "Servos ministeriais", count: counts.servos },
             { id: "pioneiros", label: "Pioneiros", count: counts.pioneiros },
@@ -469,13 +566,8 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
               title="Nenhum irmão cadastrado"
               description="Cadastre os publicadores e pioneiros da congregação para vincular ao pastoreio."
               action={
-                <Button
-                  onClick={() => {
-                    setEditingMember(null);
-                    setMemberFormOpen(true);
-                  }}
-                >
-                  <Plus size={16} className="mr-1.5" />
+                <Button onClick={() => setMemberFormOpen(true)}>
+                  <Plus size={16} className="mr-1" />
                   Cadastrar primeiro irmão
                 </Button>
               }
@@ -484,30 +576,32 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
         ) : filteredAndSortedMembers.length === 0 ? (
           <Card className="py-8">
             <EmptyState
-              title="Nenhum resultado"
-              description={
-                query
-                  ? `Nenhum irmão encontrado com o termo "${query}".`
-                  : "Nenhum irmão nesta categoria."
-              }
+              title="Nenhum irmão encontrado"
+              description={`Nenhum registro para o filtro atual${query ? ` e busca "${query}"` : ""}.`}
               action={
-                query ? (
-                  <Button variant="secondary" size="sm" onClick={() => setQuery("")}>
-                    Limpar busca
-                  </Button>
-                ) : filter !== "todos" ? (
-                  <Button variant="secondary" size="sm" onClick={() => setFilter("todos")}>
-                    Ver todos
-                  </Button>
-                ) : undefined
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setFilter("todos");
+                    setQuery("");
+                  }}
+                >
+                  Limpar filtros
+                </Button>
               }
             />
           </Card>
         ) : (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2.5">
             <div className="flex items-center justify-between px-1">
               <span className="text-caption font-semibold uppercase tracking-wider text-[var(--ink-muted)]">
-                {filter === "arquivados" ? "Arquivados" : "Irmãos"} ({filteredAndSortedMembers.length})
+                {filter === "arquivados"
+                  ? "Arquivados"
+                  : filter === "na_hora"
+                  ? "Na hora de visitar"
+                  : "Irmãos"}{" "}
+                ({filteredAndSortedMembers.length})
               </span>
               <span className="text-caption text-[var(--ink-muted)]">
                 {sortBy === "tempo_sem_visita" ? "Ordenado por tempo sem visita" : "Ordem alfabética"}
@@ -519,12 +613,15 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
               const lastVisitText = formatLastVisit(m.last_visit_date);
               const hasNoVisit = !m.last_visit_date;
 
+              const nextVisitFormatted = formatNextVisit(m.next_visit_date);
+              const isDue = !!(m.next_visit_date && m.next_visit_date <= today);
+
               return (
                 <button
                   key={m.id}
                   type="button"
                   onClick={() => setSelectedMember(m)}
-                  className="w-full text-left bg-[var(--surface)] border border-[var(--border)] rounded-lg p-3.5 hover:border-[var(--primary)]/50 active:bg-[var(--background)] transition-all shadow-xs flex items-center justify-between gap-3 group"
+                  className="w-full text-left bg-[var(--surface)] border border-[var(--border)] rounded-lg p-3.5 hover:border-[var(--primary)]/50 active:bg-[var(--background)] transition-all shadow-xs flex items-center justify-between gap-3 group cursor-pointer"
                 >
                   <div className="flex flex-col gap-1 min-w-0 flex-1">
                     <div className="flex items-center gap-2">
@@ -549,29 +646,53 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
                       </span>
                     )}
 
-                    {/* Linha da última visita: omitida na linha própria do usuário */}
+                    {/* Linhas de visita: omitidas na linha própria do usuário */}
                     {!m.is_self && (
-                      <div className="flex items-center gap-1.5 text-2xs mt-0.5">
-                        <Clock
-                          size={11}
-                          className={hasNoVisit ? "text-amber-500" : "text-[var(--ink-muted)]"}
-                        />
-                        <span
-                          className={
-                            hasNoVisit
-                              ? "text-amber-700 dark:text-amber-400 font-medium"
-                              : "text-[var(--ink-muted)]"
-                          }
-                        >
-                          {lastVisitText}
-                        </span>
+                      <div className="flex flex-col gap-0.5 mt-0.5">
+                        {/* Última visita */}
+                        <div className="flex items-center gap-1.5 text-2xs">
+                          <Clock
+                            size={11}
+                            className={hasNoVisit ? "text-amber-500" : "text-[var(--ink-muted)]"}
+                          />
+                          <span
+                            className={
+                              hasNoVisit
+                                ? "text-amber-700 dark:text-amber-400 font-medium"
+                                : "text-[var(--ink-muted)]"
+                            }
+                          >
+                            {lastVisitText}
+                          </span>
+                        </div>
+
+                        {/* Próxima visita */}
+                        {nextVisitFormatted && (
+                          <div className="flex items-center gap-1.5 text-2xs">
+                            <CalendarClock
+                              size={11}
+                              className={isDue ? "text-[var(--accent)]" : "text-[var(--ink-muted)]"}
+                            />
+                            {isDue ? (
+                              <span className="text-[var(--accent)] font-semibold flex items-center gap-1">
+                                <span>próxima visita: {nextVisitFormatted}</span>
+                                <span>·</span>
+                                <span className="font-bold">na hora de visitar</span>
+                              </span>
+                            ) : (
+                              <span className="text-[var(--ink-muted)]">
+                                próxima visita: {nextVisitFormatted}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
 
                   <ChevronRight
                     size={18}
-                    className="text-[var(--ink-muted)] group-hover:text-[var(--primary)] transition-colors shrink-0"
+                    className="text-[var(--ink-muted)] group-hover:text-[var(--primary)] shrink-0 transition-transform group-hover:translate-x-0.5"
                   />
                 </button>
               );
@@ -580,7 +701,7 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
         )}
       </div>
 
-      {/* ── DRAWER DO FORMULÁRIO DO IRMÃO (CRIAR / EDITAR) ── */}
+      {/* ── SHEET DE CADASTRO / EDIÇÃO DE IRMÃO ── */}
       <MemberFormSheet
         open={memberFormOpen}
         onClose={() => {
@@ -593,17 +714,19 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
         onDeleted={handleMemberDeleted}
       />
 
-      {/* ── DRAWER DE DETALHES DO IRMÃO + HISTÓRICO ── */}
+      {/* ── SHEET DE DETALHES DO IRMÃO (HISTÓRICO DE VISITAS) ── */}
       <MemberDetailSheet
         member={selectedMember}
         open={!!selectedMember}
         onClose={() => setSelectedMember(null)}
         onEdit={(m) => {
+          setSelectedMember(null);
           setEditingMember(m);
           setMemberFormOpen(true);
         }}
         onNewVisit={(m) => {
-          setVisitMemberIdForNew(m.id);
+          setPreselectedMemberId(m.id);
+          setEditingVisit(null);
           setVisitFormOpen(true);
         }}
         onSelectVisit={(v) => {
@@ -611,15 +734,17 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
         }}
       />
 
-      {/* ── DRAWER DE FORMULÁRIO DE PASTOREIO (AO CLICAR EM NOVA VISITA) ── */}
+      {/* ── FORMULÁRIO DE NOVA VISITA / EDIÇÃO VINCULADO AO IRMÃO ── */}
       <PastoreioFormSheet
         open={visitFormOpen}
         onClose={() => {
           setVisitFormOpen(false);
-          setVisitMemberIdForNew(null);
+          setPreselectedMemberId(null);
+          setEditingVisit(null);
         }}
         userId={userId}
-        preselectedMemberId={visitMemberIdForNew}
+        initialData={editingVisit}
+        preselectedMemberId={preselectedMemberId}
         onSaved={handleVisitSaved}
       />
 
@@ -627,11 +752,7 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
       <PastoreioDetailSheet
         visit={detailVisit}
         open={!!detailVisit}
-        linkedMemberName={
-          detailVisit?.member_id
-            ? members.find((m) => m.id === detailVisit.member_id)?.full_name || null
-            : null
-        }
+        visitedNames={detailVisitedNames}
         linkedCompanionName={
           detailVisit?.companion_member_id
             ? members.find((m) => m.id === detailVisit.companion_member_id)?.full_name || null
@@ -640,20 +761,10 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
         onClose={() => setDetailVisit(null)}
         onEdit={(v) => {
           setEditingVisit(v);
+          setVisitFormOpen(true);
         }}
         onDelete={handleDeleteVisit}
       />
-
-      {/* ── DRAWER DE EDIÇÃO DE VISITA ── */}
-      {editingVisit && (
-        <PastoreioFormSheet
-          open={!!editingVisit}
-          onClose={() => setEditingVisit(null)}
-          userId={userId}
-          initialData={editingVisit}
-          onSaved={handleVisitSaved}
-        />
-      )}
     </div>
   );
 }

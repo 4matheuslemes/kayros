@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { format } from "date-fns";
+import { format, parseISO, addMonths } from "date-fns";
 import { toast } from "sonner";
 import { Drawer } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
@@ -12,9 +12,10 @@ import { Input, Textarea, Field } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
 import type { ShepherdingVisit } from "@/lib/types/pastoreio";
 import { MemberCombobox, type MemberOption } from "./member-combobox";
+import { MemberMultiCombobox } from "./member-multi-combobox";
+import { SHEPHERDING_REVISIT_MONTHS } from "@/lib/constants";
 
 const schema = z.object({
-  family_or_person: z.string().trim().min(1, "Informe o nome da família ou pessoa visitada"),
   visit_date: z.string().min(1, "Informe a data da visita"),
   companion: z.string().optional(),
   next_visit_date: z.string().optional(),
@@ -42,9 +43,13 @@ export function PastoreioFormSheet({
 }: PastoreioFormSheetProps) {
   const [saving, setSaving] = useState(false);
   const [members, setMembers] = useState<MemberOption[]>([]);
-  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
+  const [otherPeople, setOtherPeople] = useState<string[]>([]);
   const [selectedCompanionId, setSelectedCompanionId] = useState<string | null>(null);
-  const [isCustomPerson, setIsCustomPerson] = useState(false);
+  const [visitedError, setVisitedError] = useState<string | null>(null);
+  const [savedVisitId, setSavedVisitId] = useState<string | null>(null);
+  const [isNextVisitManuallyEdited, setIsNextVisitManuallyEdited] = useState(false);
+
   const today = format(new Date(), "yyyy-MM-dd");
 
   const {
@@ -57,13 +62,14 @@ export function PastoreioFormSheet({
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      family_or_person: "",
       visit_date: today,
       companion: "",
       next_visit_date: "",
       report: "",
     },
   });
+
+  const watchVisitDate = watch("visit_date");
 
   // Load active congregation members
   useEffect(() => {
@@ -82,7 +88,7 @@ export function PastoreioFormSheet({
           setMembers(data as MemberOption[]);
         }
       } catch {
-        // Fallback transparent: form remains fully usable via text inputs
+        // Fallback transparent
       }
     };
     fetchMembers();
@@ -91,125 +97,193 @@ export function PastoreioFormSheet({
     };
   }, [open]);
 
-  // Active members for visited person (excluding self)
-  const candidateVisited = useMemo(() => {
-    return members.filter((m: any) => !m.is_self);
-  }, [members]);
+  // Recalculate suggested next visit date if visit_date changes and not manually edited
+  useEffect(() => {
+    if (!open || initialData || isNextVisitManuallyEdited) return;
+    if (!watchVisitDate) return;
 
-  // Appointed brothers for companion (elders & MS only, excluding self)
+    try {
+      const parsed = parseISO(watchVisitDate);
+      const suggested = format(addMonths(parsed, SHEPHERDING_REVISIT_MONTHS), "yyyy-MM-dd");
+      setValue("next_visit_date", suggested);
+    } catch {
+      // Ignora erro de data inválida durante digitação
+    }
+  }, [watchVisitDate, open, initialData, isNextVisitManuallyEdited, setValue]);
+
+  // Synchronize form state on open / data change
+  useEffect(() => {
+    if (!open) return;
+
+    setSavedVisitId(null);
+    setVisitedError(null);
+
+    if (initialData) {
+      reset({
+        visit_date: initialData.visit_date,
+        companion: initialData.companion ?? "",
+        next_visit_date: initialData.next_visit_date ?? "",
+        report: initialData.report ?? "",
+      });
+
+      setSelectedCompanionId(initialData.companion_member_id || null);
+      setOtherPeople(initialData.other_people || []);
+      setIsNextVisitManuallyEdited(true);
+
+      // Load linked members for this visit
+      let isMounted = true;
+      const loadLinkedMembers = async () => {
+        try {
+          const supabase = createClient();
+          const { data, error } = await supabase
+            .from("shepherding_visit_members")
+            .select("member_id")
+            .eq("visit_id", initialData.id);
+
+          if (!error && data && isMounted) {
+            const ids = data.map((d: { member_id: string }) => d.member_id);
+            setSelectedMemberIds(ids);
+          }
+        } catch {
+          // Mantém vazio se falhar
+        }
+      };
+
+      loadLinkedMembers();
+
+      return () => {
+        isMounted = false;
+      };
+    } else {
+      // Nova visita
+      const initialSuggestedNext = format(
+        addMonths(new Date(), SHEPHERDING_REVISIT_MONTHS),
+        "yyyy-MM-dd"
+      );
+
+      reset({
+        visit_date: today,
+        companion: "",
+        next_visit_date: initialSuggestedNext,
+        report: "",
+      });
+
+      setIsNextVisitManuallyEdited(false);
+      setSelectedCompanionId(null);
+      setOtherPeople([]);
+
+      if (preselectedMemberId) {
+        setSelectedMemberIds([preselectedMemberId]);
+      } else {
+        setSelectedMemberIds([]);
+      }
+    }
+  }, [open, initialData, preselectedMemberId, reset, today]);
+
+  // Candidates for visited members: active, not self, and NOT selected as companion
+  const candidateVisited = useMemo(() => {
+    return members.filter(
+      (m: any) => !m.is_self && m.id !== selectedCompanionId
+    );
+  }, [members, selectedCompanionId]);
+
+  // Candidates for companion: elders & MS, not self, and NOT in selected visited members
   const appointedCompanions = useMemo(() => {
     return members.filter(
       (m: any) =>
         !m.is_self &&
-        (m.appointment === "anciao" || m.appointment === "servo_ministerial")
+        (m.appointment === "anciao" || m.appointment === "servo_ministerial") &&
+        !selectedMemberIds.includes(m.id)
     );
-  }, [members]);
+  }, [members, selectedMemberIds]);
 
-  // Synchronize form on open or data change
-  useEffect(() => {
-    if (open) {
-      if (initialData) {
-        reset({
-          family_or_person: initialData.family_or_person,
-          visit_date: initialData.visit_date,
-          companion: initialData.companion ?? "",
-          next_visit_date: initialData.next_visit_date ?? "",
-          report: initialData.report ?? "",
-        });
+  // Multi-select handlers for Visited Members
+  const handleToggleMember = useCallback((memberId: string) => {
+    setSelectedMemberIds((prev) => {
+      const exists = prev.includes(memberId);
+      const next = exists ? prev.filter((id) => id !== memberId) : [...prev, memberId];
+      if (next.length > 0) setVisitedError(null);
+      return next;
+    });
+  }, []);
 
-        const initialMemId = initialData.member_id || null;
-        setSelectedMemberId(initialMemId);
-        setIsCustomPerson(!initialMemId && !!initialData.family_or_person);
-        setSelectedCompanionId(initialData.companion_member_id || null);
+  const handleRemoveMember = useCallback((memberId: string) => {
+    setSelectedMemberIds((prev) => prev.filter((id) => id !== memberId));
+  }, []);
+
+  const handleAddOtherPerson = useCallback((name: string) => {
+    setOtherPeople((prev) => {
+      const next = [...prev, name];
+      if (next.length > 0) setVisitedError(null);
+      return next;
+    });
+  }, []);
+
+  const handleRemoveOtherPerson = useCallback((index: number) => {
+    setOtherPeople((prev) => prev.filter((_, idx) => idx !== index));
+  }, []);
+
+  // Companion selection handler
+  const handleSelectCompanion = useCallback(
+    (c: MemberOption | null) => {
+      if (c) {
+        setSelectedCompanionId(c.id);
+        setValue("companion", c.full_name);
       } else {
-        reset({
-          family_or_person: "",
-          visit_date: today,
-          companion: "",
-          next_visit_date: "",
-          report: "",
-        });
-
-        if (preselectedMemberId) {
-          setSelectedMemberId(preselectedMemberId);
-          setIsCustomPerson(false);
-          const found = members.find((m) => m.id === preselectedMemberId);
-          if (found) {
-            setValue("family_or_person", found.full_name);
-          }
-        } else {
-          setSelectedMemberId(null);
-          setIsCustomPerson(false);
-        }
         setSelectedCompanionId(null);
+        setValue("companion", "");
       }
-    }
-  }, [open, initialData, preselectedMemberId, members, reset, setValue, today]);
-
-  // Handle selecting a member from combobox
-  const handleSelectMember = (m: MemberOption | null) => {
-    if (m) {
-      setSelectedMemberId(m.id);
-      setIsCustomPerson(false);
-      setValue("family_or_person", m.full_name, { shouldValidate: true });
-    } else {
-      setSelectedMemberId(null);
-      setIsCustomPerson(false);
-      setValue("family_or_person", "");
-    }
-  };
-
-  // Handle custom person option
-  const handleSelectCustom = () => {
-    setSelectedMemberId(null);
-    setIsCustomPerson(true);
-    setValue("family_or_person", "", { shouldValidate: true });
-  };
-
-  // Handle selecting companion
-  const handleSelectCompanion = (c: MemberOption | null) => {
-    if (c) {
-      setSelectedCompanionId(c.id);
-      setValue("companion", c.full_name);
-    } else {
-      setSelectedCompanionId(null);
-      setValue("companion", "");
-    }
-  };
+    },
+    [setValue]
+  );
 
   const onSubmit = async (data: FormData) => {
+    const memberNames = selectedMemberIds
+      .map((id) => members.find((m) => m.id === id)?.full_name)
+      .filter(Boolean) as string[];
+
+    const allNames = [...memberNames, ...otherPeople];
+
+    if (allNames.length === 0) {
+      setVisitedError("Escolha pelo menos uma pessoa");
+      return;
+    }
+    setVisitedError(null);
     setSaving(true);
+
+    const summary = allNames.join(", ");
     const supabase = createClient();
 
-    try {
-      const payload = {
-        family_or_person: data.family_or_person.trim(),
-        visit_date: data.visit_date,
-        companion: data.companion?.trim() || null,
-        next_visit_date: data.next_visit_date || null,
-        report: data.report?.trim() || null,
-        member_id: selectedMemberId,
-        companion_member_id: selectedCompanionId,
-      };
+    const visitIdToUpdate = savedVisitId || initialData?.id;
 
-      if (initialData?.id) {
-        // Update
+    const payload = {
+      family_or_person: summary,
+      visit_date: data.visit_date,
+      companion: data.companion?.trim() || null,
+      next_visit_date: data.next_visit_date || null,
+      report: data.report?.trim() || null,
+      companion_member_id: selectedCompanionId || null,
+      other_people: otherPeople,
+      member_id: null, // Legado: não gravamos mais
+    };
+
+    try {
+      let savedVisit: ShepherdingVisit;
+
+      if (visitIdToUpdate) {
         const { data: updated, error } = await supabase
           .from("shepherding_visits")
           .update({
             ...payload,
             updated_at: new Date().toISOString(),
           })
-          .eq("id", initialData.id)
+          .eq("id", visitIdToUpdate)
           .select()
           .single();
 
         if (error) throw error;
-        toast.success("Visita atualizada");
-        onSaved(updated as ShepherdingVisit);
-        onClose();
+        savedVisit = updated as ShepherdingVisit;
       } else {
-        // Insert
         const { data: created, error } = await supabase
           .from("shepherding_visits")
           .insert({
@@ -220,10 +294,30 @@ export function PastoreioFormSheet({
           .single();
 
         if (error) throw error;
-        toast.success("Visita de pastoreio registrada");
-        onSaved(created as ShepherdingVisit);
-        onClose();
+        savedVisit = created as ShepherdingVisit;
+        setSavedVisitId(savedVisit.id);
       }
+
+      // Sync members via RPC set_visit_members
+      const { error: rpcError } = await supabase.rpc("set_visit_members", {
+        p_visit_id: savedVisit.id,
+        p_member_ids: selectedMemberIds,
+      });
+
+      if (rpcError) {
+        console.error("RPC set_visit_members error:", rpcError);
+        toast.error("Visita gravada, mas houve erro ao salvar os irmãos visitados. Tente salvar novamente.");
+        // Não fecha o formulário; o ID já está em savedVisitId para nova tentativa sem duplicar
+        return;
+      }
+
+      toast.success(initialData ? "Visita atualizada" : "Visita de pastoreio registrada");
+      onSaved({
+        ...savedVisit,
+        member_ids: selectedMemberIds,
+        other_people: otherPeople,
+      });
+      onClose();
     } catch (err: unknown) {
       console.error("Error saving shepherding visit:", err);
       toast.error("Erro ao salvar visita. Verifique a conexão.");
@@ -240,62 +334,19 @@ export function PastoreioFormSheet({
       description="Responsabilidade pastoral confidencial"
     >
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 mt-2" noValidate>
-        {/* ── 1. PESSOA OU FAMÍLIA VISITADA ── */}
-        {candidateVisited.length > 0 ? (
-          <div className="flex flex-col gap-2">
-            <MemberCombobox
-              label="Pessoa ou família visitada"
-              placeholder="Buscar irmão da congregação..."
-              members={candidateVisited}
-              selectedMemberId={selectedMemberId}
-              onSelectMember={handleSelectMember}
-              allowCustom
-              customOptionLabel="Outra pessoa (digitar nome)"
-              isCustomSelected={isCustomPerson}
-              onSelectCustom={handleSelectCustom}
-              required
-              error={errors.family_or_person?.message}
-            />
-
-            {/* Nome gravado (editável para casos como 'Família Silva' ou texto livre) */}
-            <Field
-              label={
-                selectedMemberId
-                  ? "Nome no registro (editável)"
-                  : "Nome da pessoa / família"
-              }
-              htmlFor="pastoreio-family"
-              hint={
-                selectedMemberId
-                  ? "Você pode complementar ex.: 'Família de [Nome]'"
-                  : undefined
-              }
-              required
-            >
-              <Input
-                id="pastoreio-family"
-                placeholder="Ex: Família Silva ou Irmão Paulo"
-                error={!!errors.family_or_person}
-                {...register("family_or_person")}
-              />
-            </Field>
-          </div>
-        ) : (
-          /* Fallback se a consulta de irmãos falhar ou estiver indisponível */
-          <Field
-            label="Família ou pessoa visitada"
-            htmlFor="pastoreio-family"
-            error={errors.family_or_person?.message}
-            required
-          >
-            <Input
-              id="pastoreio-family"
-              placeholder="Ex: Família Silva ou Irmão Paulo"
-              error={!!errors.family_or_person}
-              {...register("family_or_person")}
-            />
-          </Field>
-        )}
+        {/* ── 1. QUEM FOI VISITADO (CAMPO ÚNICO COM MÚLTIPLOS MEMBROS E OUTRAS PESSOAS) ── */}
+        <MemberMultiCombobox
+          label="Quem foi visitado"
+          required
+          error={visitedError ?? undefined}
+          members={candidateVisited}
+          selectedMemberIds={selectedMemberIds}
+          onToggleMember={handleToggleMember}
+          onRemoveMember={handleRemoveMember}
+          otherPeople={otherPeople}
+          onAddOtherPerson={handleAddOtherPerson}
+          onRemoveOtherPerson={handleRemoveOtherPerson}
+        />
 
         {/* ── 2. DATA DA VISITA ── */}
         <Field
@@ -324,7 +375,6 @@ export function PastoreioFormSheet({
             onSelectMember={handleSelectCompanion}
           />
         ) : (
-          /* Fallback em caso de indisponibilidade da lista */
           <Field
             label="Quem acompanhou"
             htmlFor="pastoreio-companion"
@@ -338,18 +388,34 @@ export function PastoreioFormSheet({
           </Field>
         )}
 
-        {/* ── 4. PRÓXIMA VISITA (FOLLOW-UP) ── */}
-        <Field
-          label="Próxima visita"
-          htmlFor="pastoreio-next-date"
-          hint="Data prevista para follow-up (opcional)"
-        >
+        {/* ── 4. PRÓXIMA VISITA (SUGERIDA AUTOMATICAMENTE EM 8 MESES) ── */}
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center justify-between">
+            <label htmlFor="pastoreio-next-date" className="text-label text-[var(--ink)]">
+              Próxima visita (sugerida)
+            </label>
+            <button
+              type="button"
+              onClick={() => {
+                setValue("next_visit_date", "");
+                setIsNextVisitManuallyEdited(true);
+              }}
+              className="text-xs text-[var(--ink-muted)] hover:text-red-500 transition-colors cursor-pointer"
+            >
+              Sem próxima visita / Limpar
+            </button>
+          </div>
           <Input
             id="pastoreio-next-date"
             type="date"
-            {...register("next_visit_date")}
+            {...register("next_visit_date", {
+              onChange: () => setIsNextVisitManuallyEdited(true),
+            })}
           />
-        </Field>
+          <p className="text-caption text-[var(--ink-muted)] italic">
+            Daqui a 8 meses. É só um lembrete para eu olhar de novo.
+          </p>
+        </div>
 
         {/* ── 5. RELATÓRIO DA VISITA ── */}
         <Field
