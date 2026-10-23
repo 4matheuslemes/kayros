@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { useUserPermissions } from "@/contexts/user-permissions-context";
+import { isCurrentUserMember } from "@/lib/permissions";
 import {
   Users,
   Plus,
@@ -64,16 +67,26 @@ interface IrmaosClientProps {
 }
 
 export function IrmaosClient({ userId }: IrmaosClientProps) {
+  const searchParams = useSearchParams();
+  const initialTab = searchParams?.get("tab") === "grupos" ? "grupos" : "todos";
+  const initialFilterParam = searchParams?.get("filter");
+  const initialFilter: FilterType =
+    initialFilterParam === "na_hora" || initialFilterParam === "due"
+      ? "na_hora"
+      : "todos";
+
+  const { canManageMembers, canUseShepherding, memberId } = useUserPermissions();
+
   const [isUnlocked, setIsUnlocked] = useState<boolean | null>(null);
   const [members, setMembers] = useState<MemberWithLastVisit[]>([]);
   const [groups, setGroups] = useState<ServiceGroup[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Alternância de visão: "todos" ou "grupos"
-  const [activeTab, setActiveTab] = useState<"todos" | "grupos">("todos");
+  const [activeTab, setActiveTab] = useState<"todos" | "grupos">(initialTab);
 
   // Filtros e busca para "Todos os irmãos"
-  const [filter, setFilter] = useState<FilterType>("todos");
+  const [filter, setFilter] = useState<FilterType>(initialFilter);
   const [groupFilter, setGroupFilter] = useState<string>("todos");
   const [query, setQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortByType>("nome");
@@ -119,9 +132,11 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
           .from("congregation_members")
           .select("*")
           .order("full_name", { ascending: true }),
-        supabase
-          .from("shepherding_visit_members")
-          .select("member_id, visit:shepherding_visits(id, visit_date, next_visit_date, created_at, companion, companion_member_id)"),
+        canUseShepherding
+          ? supabase
+              .from("shepherding_visit_members")
+              .select("member_id, visit:shepherding_visits(id, visit_date, next_visit_date, created_at, companion, companion_member_id)")
+          : Promise.resolve({ data: [] as any[], error: null }),
         supabase
           .from("service_groups")
           .select("*")
@@ -179,7 +194,9 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
         }
       }
 
-      const merged: MemberWithLastVisit[] = (membersRes.data || []).map((m) => {
+      const merged: MemberWithLastVisit[] = (
+        (membersRes.data || []) as CongregationMember[]
+      ).map((m) => {
         const last = lastVisitMap.get(m.id);
         return {
           ...m,
@@ -591,29 +608,31 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
           title="Irmãos"
           subtitle="Cadastro congregacional confidencial"
           right={
-            activeTab === "todos" ? (
-              <Button
-                size="sm"
-                onClick={() => {
-                  setEditingMember(null);
-                  setMemberFormOpen(true);
-                }}
-              >
-                <Plus size={16} className="mr-1" />
-                Novo irmão
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                onClick={() => {
-                  setEditingGroup(null);
-                  setGroupFormOpen(true);
-                }}
-              >
-                <Plus size={16} className="mr-1" />
-                Novo grupo
-              </Button>
-            )
+            canManageMembers ? (
+              activeTab === "todos" ? (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setEditingMember(null);
+                    setMemberFormOpen(true);
+                  }}
+                >
+                  <Plus size={16} className="mr-1" />
+                  Novo irmão
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setEditingGroup(null);
+                    setGroupFormOpen(true);
+                  }}
+                >
+                  <Plus size={16} className="mr-1" />
+                  Novo grupo
+                </Button>
+              )
+            ) : null
           }
         />
       </div>
@@ -723,7 +742,9 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-none">
             {[
               { id: "todos", label: "Todos", count: counts.todos },
-              { id: "na_hora", label: "Na hora de visitar", count: counts.na_hora },
+              ...(canUseShepherding
+                ? [{ id: "na_hora", label: "Na hora de visitar", count: counts.na_hora }]
+                : []),
               { id: "anciaos", label: "Anciãos", count: counts.anciaos },
               { id: "servos", label: "Servos ministeriais", count: counts.servos },
               { id: "pioneiros", label: "Pioneiros", count: counts.pioneiros },
@@ -770,10 +791,12 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
                 title="Nenhum irmão cadastrado"
                 description="Cadastre os publicadores e pioneiros da congregação para vincular ao pastoreio."
                 action={
-                  <Button onClick={() => setMemberFormOpen(true)}>
-                    <Plus size={16} className="mr-1" />
-                    Cadastrar primeiro irmão
-                  </Button>
+                  canManageMembers ? (
+                    <Button onClick={() => setMemberFormOpen(true)}>
+                      <Plus size={16} className="mr-1" />
+                      Cadastrar primeiro irmão
+                    </Button>
+                  ) : undefined
                 }
               />
             </Card>
@@ -814,6 +837,7 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
               </div>
 
               {filteredAndSortedMembers.map((m) => {
+                const isSelf = isCurrentUserMember(m, { memberId, userId });
                 const designations = formatDesignations(m);
                 const lastVisitText = formatLastVisit(m.last_visit_date);
                 const hasNoVisit = !m.last_visit_date;
@@ -837,7 +861,7 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
                         <span className="font-display font-semibold text-base text-[var(--ink)] truncate group-hover:text-[var(--primary)] transition-colors">
                           {m.full_name}
                         </span>
-                        {m.is_self && (
+                        {isSelf && (
                           <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-2 py-0.2 rounded-full bg-[var(--primary)] text-white">
                             Você
                           </span>
@@ -865,8 +889,8 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
                         </span>
                       )}
 
-                      {/* Linhas de visita: omitidas na linha própria do usuário */}
-                      {!m.is_self && (
+                      {/* Linhas de visita: omitidas na linha própria do usuário ou se não tem shepherding_access */}
+                      {!isSelf && canUseShepherding && (
                         <div className="flex flex-col gap-0.5 mt-0.5">
                           {/* Última visita */}
                           <div className="flex items-center gap-1.5 text-2xs">
@@ -982,28 +1006,30 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
                         </div>
 
                         {/* Botões do Cabeçalho */}
-                        <div className="flex items-center gap-1 shrink-0">
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => setAddMembersGroup(group)}
-                            className="h-8 px-2.5 text-xs"
-                          >
-                            <UserPlus size={13} className="mr-1" />
-                            Adicionar
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setEditingGroup(group);
-                              setGroupFormOpen(true);
-                            }}
-                            className="h-8 px-2 text-xs"
-                          >
-                            <Pencil size={13} />
-                          </Button>
-                        </div>
+                        {canManageMembers && (
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => setAddMembersGroup(group)}
+                              className="h-8 px-2.5 text-xs"
+                            >
+                              <UserPlus size={13} className="mr-1" />
+                              Adicionar
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setEditingGroup(group);
+                                setGroupFormOpen(true);
+                              }}
+                              className="h-8 px-2 text-xs"
+                            >
+                              <Pencil size={13} />
+                            </Button>
+                          </div>
+                        )}
                       </div>
 
                       {/* Resumo Automático em Tempo Real */}
@@ -1034,6 +1060,7 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
                     ) : (
                       <div className="flex flex-col divide-y divide-[var(--border)]/40 -mx-1">
                         {groupMembers.map((m, index) => {
+                          const isSelf = isCurrentUserMember(m, { memberId, userId });
                           const isOverseer = m.id === group.overseer_id;
                           const isAssistant = m.id === group.assistant_id;
                           const badges = getGroupMemberBadges(m, isOverseer, isAssistant);
@@ -1056,7 +1083,7 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
                                     <span className="text-body-sm font-medium text-[var(--ink)] hover:text-[var(--primary)] transition-colors truncate">
                                       {m.full_name}
                                     </span>
-                                    {m.is_self && (
+                                    {isSelf && (
                                       <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded-full bg-[var(--primary)] text-white">
                                         Você
                                       </span>
@@ -1087,30 +1114,34 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
 
                               {/* Lado direito: Ações Rápidas */}
                               <div className="flex items-center gap-0.5 shrink-0">
-                                <button
-                                  type="button"
-                                  onClick={() => setTransferMember(m)}
-                                  className="p-1.5 rounded-md hover:bg-[var(--background)] text-[var(--ink-muted)] hover:text-[var(--primary)] transition-colors cursor-pointer"
-                                  title="Transferir de grupo"
-                                  aria-label="Transferir de grupo"
-                                >
-                                  <ArrowRightLeft size={14} />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveMemberFromGroup(m)}
-                                  className="p-1.5 rounded-md hover:bg-red-500/10 text-[var(--ink-muted)] hover:text-red-500 transition-colors cursor-pointer"
-                                  title="Remover do grupo"
-                                  aria-label="Remover do grupo"
-                                >
-                                  <UserMinus size={14} />
-                                </button>
+                                {canManageMembers && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => setTransferMember(m)}
+                                      className="p-1.5 rounded-md hover:bg-[var(--background)] text-[var(--ink-muted)] hover:text-[var(--primary)] transition-colors cursor-pointer"
+                                      title="Transferir de grupo"
+                                      aria-label="Transferir de grupo"
+                                    >
+                                      <ArrowRightLeft size={14} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveMemberFromGroup(m)}
+                                      className="p-1.5 rounded-md hover:bg-red-500/10 text-[var(--ink-muted)] hover:text-red-500 transition-colors cursor-pointer"
+                                      title="Remover do grupo"
+                                      aria-label="Remover do grupo"
+                                    >
+                                      <UserMinus size={14} />
+                                    </button>
+                                  </>
+                                )}
                                 <button
                                   type="button"
                                   onClick={() => setSelectedMember(m)}
                                   className="p-1.5 rounded-md hover:bg-[var(--background)] text-[var(--ink-muted)] hover:text-[var(--ink)] transition-colors cursor-pointer"
-                                  title="Ver histórico / detalhes"
-                                  aria-label="Ver histórico"
+                                  title="Ver detalhes"
+                                  aria-label="Ver detalhes"
                                 >
                                   <ChevronRight size={15} />
                                 </button>
@@ -1178,17 +1209,19 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
                           </div>
 
                           {/* Botão direto para alocar */}
-                          <div className="shrink-0 flex items-center gap-1">
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              onClick={() => setTransferMember(m)}
-                              className="h-8 px-2.5 text-xs"
-                            >
-                              <UserCheck size={13} className="mr-1" />
-                              Alocar em grupo
-                            </Button>
-                          </div>
+                          {canManageMembers && (
+                            <div className="shrink-0 flex items-center gap-1">
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => setTransferMember(m)}
+                                className="h-8 px-2.5 text-xs"
+                              >
+                                <UserCheck size={13} className="mr-1" />
+                                Alocar em grupo
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -1253,6 +1286,13 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
         member={selectedMember}
         open={!!selectedMember}
         onClose={() => setSelectedMember(null)}
+        canManageMembers={canManageMembers}
+        canUseShepherding={canUseShepherding}
+        isCurrentUser={
+          selectedMember
+            ? isCurrentUserMember(selectedMember, { memberId, userId })
+            : false
+        }
         onEdit={(m) => {
           setSelectedMember(null);
           setEditingMember(m);
@@ -1292,6 +1332,7 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
             ? members.find((m) => m.id === detailVisit.companion_member_id)?.full_name || null
             : null
         }
+        currentUserId={userId}
         onClose={() => setDetailVisit(null)}
         onEdit={(v) => {
           setEditingVisit(v);

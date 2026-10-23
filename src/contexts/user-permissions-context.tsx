@@ -1,18 +1,25 @@
 "use client";
 
 import { createContext, useContext, type ReactNode } from "react";
+import {
+  type UserPermissions,
+  EMPTY_PERMISSIONS,
+} from "@/lib/permissions";
 
-export interface UserPermissions {
+export type { UserPermissions };
+
+export interface UserPermissionsContextValue extends UserPermissions {
+  /** Compatibilidade com código legado que lia `talksAccess` */
   talksAccess: boolean;
-  isElder: boolean;
-  isAdmin: boolean;
 }
 
-const UserPermissionsContext = createContext<UserPermissions>({
+const defaultContextValue: UserPermissionsContextValue = {
+  ...EMPTY_PERMISSIONS,
   talksAccess: false,
-  isElder: false,
-  isAdmin: false,
-});
+};
+
+const UserPermissionsContext =
+  createContext<UserPermissionsContextValue>(defaultContextValue);
 
 export function UserPermissionsProvider({
   children,
@@ -21,13 +28,18 @@ export function UserPermissionsProvider({
   children: ReactNode;
   permissions: UserPermissions;
 }) {
+  const value: UserPermissionsContextValue = {
+    ...permissions,
+    talksAccess: permissions.canUseTalks,
+  };
+
   return (
-    <UserPermissionsContext.Provider value={permissions}>
+    <UserPermissionsContext.Provider value={value}>
       {children}
     </UserPermissionsContext.Provider>
   );
 }
 
-export function useUserPermissions(): UserPermissions {
+export function useUserPermissions(): UserPermissionsContextValue {
   return useContext(UserPermissionsContext);
 }

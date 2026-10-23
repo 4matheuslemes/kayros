@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { fetchUserPermissions } from "@/lib/permissions";
 
 export default async function NovaVisitaPage() {
   const supabase = await createClient();
@@ -11,13 +12,8 @@ export default async function NovaVisitaPage() {
     redirect("/login");
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("is_elder")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile?.is_elder) {
+  const permissions = await fetchUserPermissions(supabase, user.id);
+  if (!permissions.canUseShepherding) {
     redirect("/");
   }
 

@@ -26,7 +26,7 @@ const DAYS_OF_WEEK = [
 const schema = z.object({
   full_name: z.string().min(1, "Nome obrigatório"),
   monthly_goal_hours: z.coerce.number().int().min(1).max(300),
-  working_days: z.array(z.number()).min(1, "Selecione ao menos um dia"),
+  working_days: z.array(z.number()),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -34,32 +34,43 @@ type FormData = z.infer<typeof schema>;
 interface OnboardingClientProps {
   userId: string;
   initialName: string;
+  canUseHours?: boolean;
 }
 
-export function OnboardingClient({ userId, initialName }: OnboardingClientProps) {
+export function OnboardingClient({
+  userId,
+  initialName,
+  canUseHours = true,
+}: OnboardingClientProps) {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
 
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
       full_name: initialName,
       monthly_goal_hours: 50,
-      working_days: [], // Start empty so user has to choose
+      working_days: canUseHours ? [] : [1, 2, 3, 4, 5, 6, 7],
     },
   });
 
   const onSubmit = async (data: FormData) => {
     setSaving(true);
     const supabase = createClient();
-    
+
     // Upsert into supabase
     const { error } = await supabase.from("profiles").upsert({
       id: userId,
       full_name: data.full_name,
-      monthly_goal_hours: data.monthly_goal_hours,
-      working_days: data.working_days,
+      monthly_goal_hours: canUseHours ? data.monthly_goal_hours : 50,
+      working_days: canUseHours ? data.working_days : [1, 2, 3, 4, 5, 6, 7],
       onboarding_completed: true,
     });
 
@@ -75,17 +86,17 @@ export function OnboardingClient({ userId, initialName }: OnboardingClientProps)
     if (existing) {
       await db.profiles.update(userId, {
         full_name: data.full_name,
-        monthly_goal_hours: data.monthly_goal_hours,
-        working_days: data.working_days,
+        monthly_goal_hours: canUseHours ? data.monthly_goal_hours : 50,
+        working_days: canUseHours ? data.working_days : [1, 2, 3, 4, 5, 6, 7],
         onboarding_completed: true,
       });
     } else {
       await db.profiles.add({
         id: userId,
         full_name: data.full_name,
-        monthly_goal_hours: data.monthly_goal_hours,
-        service_year_start_month: 9, // fallback default
-        working_days: data.working_days,
+        monthly_goal_hours: canUseHours ? data.monthly_goal_hours : 50,
+        service_year_start_month: 9,
+        working_days: canUseHours ? data.working_days : [1, 2, 3, 4, 5, 6, 7],
         onboarding_completed: true,
       });
     }
@@ -99,7 +110,7 @@ export function OnboardingClient({ userId, initialName }: OnboardingClientProps)
       toast.error("Preencha seu nome");
       return;
     }
-    setStep(s => s + 1);
+    setStep((s) => s + 1);
   };
 
   return (
@@ -109,7 +120,9 @@ export function OnboardingClient({ userId, initialName }: OnboardingClientProps)
           Bem-vindo ao Kairós
         </h1>
         <p className="text-body text-[var(--ink-muted)]">
-          Vamos configurar seu perfil rapidamente.
+          {canUseHours
+            ? "Vamos configurar seu perfil rapidamente."
+            : "Confirme seus dados para acessar o app da congregação."}
         </p>
       </div>
 
@@ -119,9 +132,15 @@ export function OnboardingClient({ userId, initialName }: OnboardingClientProps)
             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
               <div className="flex items-center gap-2 text-[var(--primary)] mb-2">
                 <User size={20} />
-                <h2 className="text-subheading font-medium">Como podemos te chamar?</h2>
+                <h2 className="text-subheading font-medium">
+                  Como podemos te chamar?
+                </h2>
               </div>
-              <Field label="Nome ou Apelido" htmlFor="full_name" error={errors.full_name?.message}>
+              <Field
+                label="Nome completo ou de preferência"
+                htmlFor="full_name"
+                error={errors.full_name?.message}
+              >
                 <Input
                   id="full_name"
                   placeholder="Seu nome"
@@ -129,13 +148,30 @@ export function OnboardingClient({ userId, initialName }: OnboardingClientProps)
                   autoFocus
                 />
               </Field>
-              <Button type="button" onClick={nextStep} size="lg" className="w-full">
-                Continuar
-              </Button>
+
+              {canUseHours ? (
+                <Button
+                  type="button"
+                  onClick={nextStep}
+                  size="lg"
+                  className="w-full"
+                >
+                  Continuar
+                </Button>
+              ) : (
+                <Button
+                  type="submit"
+                  size="lg"
+                  loading={saving}
+                  className="w-full"
+                >
+                  Concluir cadastro
+                </Button>
+              )}
             </div>
           )}
 
-          {step === 2 && (
+          {canUseHours && step === 2 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
               <div className="flex items-center gap-2 text-[var(--primary)] mb-2">
                 <Target size={20} />
@@ -144,7 +180,11 @@ export function OnboardingClient({ userId, initialName }: OnboardingClientProps)
               <p className="text-sm text-[var(--ink-muted)]">
                 Quantas horas você planeja dedicar por mês?
               </p>
-              <Field label="Horas" htmlFor="monthly_goal_hours" error={errors.monthly_goal_hours?.message}>
+              <Field
+                label="Horas"
+                htmlFor="monthly_goal_hours"
+                error={errors.monthly_goal_hours?.message}
+              >
                 <Input
                   id="monthly_goal_hours"
                   type="number"
@@ -152,31 +192,43 @@ export function OnboardingClient({ userId, initialName }: OnboardingClientProps)
                   min={1}
                   max={300}
                   {...register("monthly_goal_hours")}
-                  autoFocus
                 />
               </Field>
               <div className="flex gap-3">
-                <Button type="button" variant="secondary" size="lg" onClick={() => setStep(1)} className="flex-1">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="lg"
+                  onClick={() => setStep(1)}
+                  className="w-1/3"
+                >
                   Voltar
                 </Button>
-                <Button type="button" onClick={nextStep} size="lg" className="flex-1">
+                <Button
+                  type="button"
+                  onClick={nextStep}
+                  size="lg"
+                  className="w-2/3"
+                >
                   Continuar
                 </Button>
               </div>
             </div>
           )}
 
-          {step === 3 && (
+          {canUseHours && step === 3 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
               <div className="flex items-center gap-2 text-[var(--primary)] mb-2">
                 <CalendarDays size={20} />
-                <h2 className="text-subheading font-medium">Dias de campo</h2>
+                <h2 className="text-subheading font-medium">
+                  Dias de campo habituais
+                </h2>
               </div>
               <p className="text-sm text-[var(--ink-muted)]">
-                Quais dias da semana você costuma sair no campo? Isso ajuda a calcular seu ritmo ideal.
+                Selecione os dias da semana em que você costuma sair no campo.
               </p>
-              
-              <div className="flex flex-wrap justify-center gap-1 sm:gap-1.5 py-2 w-full max-w-full overflow-hidden">
+
+              <div className="flex flex-wrap justify-center gap-2 pt-2">
                 {DAYS_OF_WEEK.map((day) => {
                   const currentDays = watch("working_days") || [];
                   const isSelected = currentDays.includes(day.id);
@@ -186,12 +238,20 @@ export function OnboardingClient({ userId, initialName }: OnboardingClientProps)
                       type="button"
                       onClick={() => {
                         if (isSelected) {
-                          setValue("working_days", currentDays.filter(d => d !== day.id), { shouldValidate: true, shouldDirty: true });
+                          setValue(
+                            "working_days",
+                            currentDays.filter((d) => d !== day.id),
+                            { shouldValidate: true }
+                          );
                         } else {
-                          setValue("working_days", [...currentDays, day.id].sort(), { shouldValidate: true, shouldDirty: true });
+                          setValue(
+                            "working_days",
+                            [...currentDays, day.id].sort(),
+                            { shouldValidate: true }
+                          );
                         }
                       }}
-                      className={`w-9 h-9 sm:w-10 sm:h-10 flex-shrink-0 flex items-center justify-center rounded-full text-[11px] font-sans font-semibold transition-all ${
+                      className={`w-11 h-11 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${
                         isSelected
                           ? "bg-[var(--primary)] text-white shadow-sm"
                           : "bg-[var(--surface)] border border-[var(--border)] text-[var(--ink-muted)] hover:bg-[var(--background)]"
@@ -202,12 +262,24 @@ export function OnboardingClient({ userId, initialName }: OnboardingClientProps)
                   );
                 })}
               </div>
-              
-              <div className="flex gap-3 mt-4">
-                <Button type="button" variant="secondary" size="lg" onClick={() => setStep(2)} className="flex-1">
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="lg"
+                  onClick={() => setStep(2)}
+                  className="w-1/3"
+                >
                   Voltar
                 </Button>
-                <Button type="submit" variant="primary" size="lg" loading={saving} className="flex-1">
+                <Button
+                  type="submit"
+                  size="lg"
+                  loading={saving}
+                  className="w-2/3"
+                >
+                  <CheckCircle2 size={18} className="mr-2" />
                   Concluir
                 </Button>
               </div>
@@ -215,18 +287,6 @@ export function OnboardingClient({ userId, initialName }: OnboardingClientProps)
           )}
         </form>
       </Card>
-      
-      {/* Indicador de passos */}
-      <div className="flex justify-center gap-2 mt-4">
-        {[1, 2, 3].map((i) => (
-          <div 
-            key={i} 
-            className={`h-1.5 rounded-full transition-all duration-300 ${
-              step >= i ? "w-8 bg-[var(--primary)]" : "w-2 bg-[var(--border)]"
-            }`} 
-          />
-        ))}
-      </div>
     </div>
   );
 }

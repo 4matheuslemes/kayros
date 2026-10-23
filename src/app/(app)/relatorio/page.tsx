@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { RelatorioClient } from "./relatorio-client";
+import { fetchUserPermissions } from "@/lib/permissions";
 
 export const metadata: Metadata = { title: "Relatório do Mês" };
 
@@ -9,6 +10,11 @@ export default async function RelatorioPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  const permissions = await fetchUserPermissions(supabase, user.id);
+  if (!permissions.canUseHours) {
+    redirect("/");
+  }
 
   const { data: profile } = await supabase
     .from("profiles")

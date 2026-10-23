@@ -14,6 +14,8 @@ import type { ShepherdingVisit } from "@/lib/types/pastoreio";
 import { MemberCombobox, type MemberOption } from "./member-combobox";
 import { MemberMultiCombobox } from "./member-multi-combobox";
 import { SHEPHERDING_REVISIT_MONTHS } from "@/lib/constants";
+import { useUserPermissions } from "@/contexts/user-permissions-context";
+import { isCurrentUserMember } from "@/lib/permissions";
 
 const schema = z.object({
   visit_date: z.string().min(1, "Informe a data da visita"),
@@ -182,22 +184,26 @@ export function PastoreioFormSheet({
     }
   }, [open, initialData, preselectedMemberId, reset, today]);
 
+  const { memberId } = useUserPermissions();
+
   // Candidates for visited members: active, not self, and NOT selected as companion
   const candidateVisited = useMemo(() => {
     return members.filter(
-      (m: any) => !m.is_self && m.id !== selectedCompanionId
+      (m: any) =>
+        !isCurrentUserMember(m, { memberId, userId }) &&
+        m.id !== selectedCompanionId
     );
-  }, [members, selectedCompanionId]);
+  }, [members, selectedCompanionId, memberId, userId]);
 
   // Candidates for companion: elders & MS, not self, and NOT in selected visited members
   const appointedCompanions = useMemo(() => {
     return members.filter(
       (m: any) =>
-        !m.is_self &&
+        !isCurrentUserMember(m, { memberId, userId }) &&
         (m.appointment === "anciao" || m.appointment === "servo_ministerial") &&
         !selectedMemberIds.includes(m.id)
     );
-  }, [members, selectedMemberIds]);
+  }, [members, selectedMemberIds, memberId, userId]);
 
   // Multi-select handlers for Visited Members
   const handleToggleMember = useCallback((memberId: string) => {

@@ -9,36 +9,53 @@ import { AppLockGate } from "@/components/security/app-lock-gate";
 import { PwaUpdatePrompt } from "@/components/pwa/update-prompt";
 import { FLOATING_NAV_ITEMS } from "@/lib/constants";
 import { UserPermissionsProvider } from "@/contexts/user-permissions-context";
+import {
+  type UserPermissions,
+  type FloatingNavId,
+  isFloatingItemAllowed,
+  derivePermissions,
+} from "@/lib/permissions";
 
 interface AppShellClientProps {
   children: React.ReactNode;
-  talksAccess: boolean;
+  permissions?: UserPermissions;
+  talksAccess?: boolean;
   isElder?: boolean;
   isAdmin?: boolean;
 }
 
 export function AppShellClient({
   children,
-  talksAccess,
+  permissions: propPermissions,
+  talksAccess = false,
   isElder = false,
   isAdmin = false,
 }: AppShellClientProps) {
   const isOnline = useOnlineSync();
   const pathname = usePathname();
-  const isPresentation = pathname?.includes("/discursos/") && pathname?.endsWith("/apresentar");
+  const isPresentation =
+    pathname?.includes("/discursos/") && pathname?.endsWith("/apresentar");
+
+  const permissions = useMemo(() => {
+    if (propPermissions) return propPermissions;
+    return derivePermissions({
+      is_admin: isAdmin,
+      is_elder: isElder,
+      talks_access: talksAccess,
+      contacts_access: true,
+      hours_access: false,
+    });
+  }, [propPermissions, talksAccess, isElder, isAdmin]);
 
   const hasVisibleFloatingNav = useMemo(() => {
-    const items = FLOATING_NAV_ITEMS as readonly ("inicio" | "interessados" | "historico" | "discursos")[];
+    const items = FLOATING_NAV_ITEMS as readonly FloatingNavId[];
     if (items.length === 0) return false;
     if (pathname === "/onboarding" || isPresentation) return false;
-    return items.some((id) => {
-      if (id === "discursos") return talksAccess;
-      return true;
-    });
-  }, [talksAccess, pathname, isPresentation]);
+    return items.some((id) => isFloatingItemAllowed(id, permissions));
+  }, [permissions, pathname, isPresentation]);
 
   return (
-    <UserPermissionsProvider permissions={{ talksAccess, isElder, isAdmin }}>
+    <UserPermissionsProvider permissions={permissions}>
       <AppLockGate>
         <div
           className="app-shell"
@@ -55,7 +72,7 @@ export function AppShellClient({
             <div className="page-content">{children}</div>
           </main>
 
-          {hasVisibleFloatingNav && <BottomNav talksAccess={talksAccess} />}
+          {hasVisibleFloatingNav && <BottomNav permissions={permissions} />}
           <Toaster
             position="top-center"
             toastOptions={{

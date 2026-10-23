@@ -381,9 +381,11 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
                     </h3>
                   </div>
 
-                  <div className="flex items-center gap-1.5 text-caption text-[var(--ink-muted)]">
+                  <div className="flex flex-wrap items-center gap-1.5 text-caption text-[var(--ink-muted)]">
                     <Calendar size={13} className="shrink-0 text-[var(--ink-muted)]" />
                     <span>{formattedDate}</span>
+                    <span>•</span>
+                    <span className="truncate">Realizada por: {visit.created_by_name || "Ancião"}</span>
                   </div>
 
                   {/* Indicators for Companion and Next Visit */}
@@ -393,7 +395,7 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
                         <span className="inline-flex items-center gap-1 text-2xs text-[var(--ink-muted)] bg-[var(--background)] px-2 py-0.5 rounded-full border border-[var(--border)]">
                           <Users size={11} className="shrink-0" />
                           <span className="truncate max-w-[140px]">
-                            {companionDisplayName}
+                            Acompanhante: {companionDisplayName}
                           </span>
                         </span>
                       )}
@@ -442,6 +444,7 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
             ? membersMap.get(detailVisit.companion_member_id)
             : null
         }
+        currentUserId={userId}
       />
     </div>
   );

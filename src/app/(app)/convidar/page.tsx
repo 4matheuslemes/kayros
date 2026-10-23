@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { InviteClient } from "./invite-client";
+import { fetchUserPermissions } from "@/lib/permissions";
 
 export default async function ConvidarPage() {
   const supabase = await createClient();
@@ -10,15 +11,10 @@ export default async function ConvidarPage() {
     redirect("/login");
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("is_admin")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile?.is_admin) {
+  const permissions = await fetchUserPermissions(supabase, user.id);
+  if (!permissions.isElderOrAdmin) {
     redirect("/");
   }
 
-  return <InviteClient />;
+  return <InviteClient currentUserId={user.id} />;
 }

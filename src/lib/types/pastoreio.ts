@@ -11,6 +11,8 @@ export interface ShepherdingVisit {
   created_at: string;
   updated_at: string;
   member_ids?: string[];
+  created_by_member_id?: string | null;
+  created_by_name?: string | null;
 }
 
 export interface ShepherdingVisitFormData {

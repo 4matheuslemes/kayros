@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Users, CalendarClock, Pencil, Trash2, AlertTriangle, UserCheck } from "lucide-react";
+import { Calendar, Users, CalendarClock, Pencil, Trash2, AlertTriangle, UserCheck, Shield } from "lucide-react";
 import { Drawer } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import type { ShepherdingVisit } from "@/lib/types/pastoreio";
@@ -16,6 +16,7 @@ interface PastoreioDetailSheetProps {
   onDelete: (visitId: string) => Promise<void>;
   visitedNames?: string[];
   linkedCompanionName?: string | null;
+  currentUserId?: string;
 }
 
 export function PastoreioDetailSheet({
@@ -26,6 +27,7 @@ export function PastoreioDetailSheet({
   onDelete,
   visitedNames,
   linkedCompanionName,
+  currentUserId,
 }: PastoreioDetailSheetProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -35,6 +37,7 @@ export function PastoreioDetailSheet({
   const displayNames = visitedNames && visitedNames.length > 0 ? visitedNames : [visit.family_or_person];
   const drawerTitle = displayNames.join(", ");
   const displayCompanion = linkedCompanionName || visit.companion;
+  const isAuthor = !currentUserId || visit.user_id === currentUserId;
 
   const formattedDate = (() => {
     try {
@@ -99,6 +102,13 @@ export function PastoreioDetailSheet({
 
           <div className="h-px bg-[var(--border)]/60 my-0.5" />
 
+          {/* Realizada por (Autoria) */}
+          <div className="flex items-center gap-2 text-body-sm text-[var(--ink)]">
+            <Shield size={15} className="text-[var(--primary)] shrink-0" />
+            <span className="font-medium">Realizada por:</span>
+            <span>{visit.created_by_name || "Ancião"}</span>
+          </div>
+
           <div className="flex items-center gap-2 text-body-sm text-[var(--ink)]">
             <Calendar size={15} className="text-[var(--primary)] shrink-0" />
             <span className="font-medium">Data:</span>
@@ -138,8 +148,12 @@ export function PastoreioDetailSheet({
           )}
         </div>
 
-        {/* Confirmação de exclusão ou botões de ação */}
-        {confirmDelete ? (
+        {/* Confirmação de exclusão ou botões de ação ou modo somente leitura */}
+        {!isAuthor ? (
+          <div className="pt-2 text-center text-xs text-[var(--ink-muted)] bg-[var(--background)]/40 p-2.5 rounded-lg border border-[var(--border)]">
+            Visita registrada por {visit.created_by_name || "outro irmão"} (somente leitura)
+          </div>
+        ) : confirmDelete ? (
           <div className="flex flex-col gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-lg animate-in fade-in duration-150">
             <div className="flex items-start gap-2.5 text-body-sm text-red-600 dark:text-red-400">
               <AlertTriangle size={18} className="shrink-0 mt-0.5" />

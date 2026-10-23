@@ -7,24 +7,32 @@ import { Home, ScrollText, Users, BookOpenText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { lightTap } from "@/lib/haptics";
 import { FLOATING_NAV_ITEMS } from "@/lib/constants";
+import { useUserPermissions } from "@/contexts/user-permissions-context";
+import {
+  type UserPermissions,
+  type FloatingNavId,
+  isFloatingItemAllowed,
+} from "@/lib/permissions";
 
 interface BottomNavProps {
+  permissions?: UserPermissions;
   talksAccess?: boolean;
 }
 
-const FLOATING_ITEM_CONFIG = {
+const FLOATING_ITEM_CONFIG: Record<
+  FloatingNavId,
+  { href: string; icon: typeof Home; label: string }
+> = {
   inicio: { href: "/", icon: Home, label: "Início" },
   interessados: { href: "/contatos", icon: Users, label: "Interessados" },
   historico: { href: "/historico", icon: ScrollText, label: "Histórico" },
-  discursos: {
-    href: "/discursos",
-    icon: BookOpenText,
-    label: "Discursos",
-    requiresTalksAccess: true,
-  },
-} as const;
+  discursos: { href: "/discursos", icon: BookOpenText, label: "Discursos" },
+};
 
-export function BottomNav({ talksAccess = false }: BottomNavProps) {
+export function BottomNav({ permissions: propPermissions }: BottomNavProps) {
+  const contextPermissions = useUserPermissions();
+  const permissions = propPermissions ?? contextPermissions;
+
   const pathname = usePathname();
   const [optimisticPath, setOptimisticPath] = useState(pathname);
 
@@ -34,10 +42,11 @@ export function BottomNav({ talksAccess = false }: BottomNavProps) {
   }, [pathname]);
 
   const navItems = useMemo(() => {
-    return FLOATING_NAV_ITEMS.map((id) => FLOATING_ITEM_CONFIG[id])
-      .filter(Boolean)
-      .filter((item) => !("requiresTalksAccess" in item && item.requiresTalksAccess && !talksAccess));
-  }, [talksAccess]);
+    return (FLOATING_NAV_ITEMS as readonly FloatingNavId[])
+      .filter((id) => isFloatingItemAllowed(id, permissions))
+      .map((id) => FLOATING_ITEM_CONFIG[id])
+      .filter(Boolean);
+  }, [permissions]);
 
   if (navItems.length === 0) {
     return null;
@@ -50,14 +59,18 @@ export function BottomNav({ talksAccess = false }: BottomNavProps) {
       className={cn(
         "fixed z-40",
         "bottom-[calc(env(safe-area-inset-bottom)+1rem)]",
-        isCompact ? "left-0 right-0 mx-auto w-fit max-w-[calc(100vw-2rem)] px-2" : "left-4 right-4 mx-auto max-w-md",
+        isCompact
+          ? "left-0 right-0 mx-auto w-fit max-w-[calc(100vw-2rem)] px-2"
+          : "left-4 right-4 mx-auto max-w-md",
         "border border-black/10 dark:border-white/15 rounded-full",
         "shadow-[0_8px_30px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.8)]",
         "dark:shadow-[0_8px_30px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.15)]",
         "flex items-stretch overflow-hidden",
         "h-[64px]"
       )}
-      style={{ backgroundColor: "color-mix(in srgb, var(--surface) 97%, transparent)" }}
+      style={{
+        backgroundColor: "color-mix(in srgb, var(--surface) 97%, transparent)",
+      }}
       aria-label="Navegação principal"
     >
       {navItems.map(({ href, icon: Icon, label }) => {

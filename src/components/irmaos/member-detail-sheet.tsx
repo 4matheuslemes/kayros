@@ -10,7 +10,6 @@ import {
   HeartHandshake,
   ChevronRight,
   Shield,
-  Sparkles,
   Archive,
 } from "lucide-react";
 import { Drawer } from "@/components/ui/drawer";
@@ -26,6 +25,9 @@ interface MemberDetailSheetProps {
   onEdit: (member: CongregationMember) => void;
   onNewVisit: (member: CongregationMember) => void;
   onSelectVisit: (visit: ShepherdingVisit) => void;
+  canManageMembers?: boolean;
+  canUseShepherding?: boolean;
+  isCurrentUser?: boolean;
 }
 
 export function MemberDetailSheet({
@@ -35,12 +37,17 @@ export function MemberDetailSheet({
   onEdit,
   onNewVisit,
   onSelectVisit,
+  canManageMembers = true,
+  canUseShepherding = true,
+  isCurrentUser = false,
 }: MemberDetailSheetProps) {
   const [visits, setVisits] = useState<ShepherdingVisit[]>([]);
   const [loadingVisits, setLoadingVisits] = useState(false);
 
+  const isSelf = isCurrentUser || !!member?.is_self;
+
   useEffect(() => {
-    if (!open || !member) {
+    if (!open || !member || !canUseShepherding || isSelf) {
       setVisits([]);
       return;
     }
@@ -80,7 +87,7 @@ export function MemberDetailSheet({
     return () => {
       isMounted = false;
     };
-  }, [open, member]);
+  }, [open, member, canUseShepherding, isSelf]);
 
   if (!member) return null;
 
@@ -118,7 +125,7 @@ export function MemberDetailSheet({
         {/* ── METADADOS DO IRMÃO ── */}
         <div className="flex flex-col gap-2.5 bg-[var(--background)]/60 border border-[var(--border)] rounded-lg p-3.5">
           <div className="flex flex-wrap items-center gap-2">
-            {member.is_self && (
+            {isSelf && (
               <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[var(--primary)] text-white">
                 <Shield size={12} />
                 Você
@@ -143,42 +150,47 @@ export function MemberDetailSheet({
             )}
           </div>
 
-          {member.is_self && (
+          {isSelf && (
             <p className="text-caption text-[var(--ink-muted)] italic mt-1">
-              Este é o seu registro pessoal. Ele não recebe visitas de pastoreio e não pode ser selecionado como acompanhante.
+              Este é o seu registro pessoal na lista de membros.
             </p>
           )}
         </div>
 
         {/* ── BOTÕES DE AÇÃO ── */}
-        {!member.is_self && (
+        {!isSelf && (
           <div className="flex gap-2.5">
-            <Button
-              className="flex-1"
-              onClick={() => {
-                onClose();
-                onNewVisit(member);
-              }}
-            >
-              <HeartHandshake size={16} className="mr-1.5" />
-              Nova visita
-            </Button>
+            {canUseShepherding && (
+              <Button
+                className="flex-1"
+                onClick={() => {
+                  onClose();
+                  onNewVisit(member);
+                }}
+              >
+                <HeartHandshake size={16} className="mr-1.5" />
+                Nova visita
+              </Button>
+            )}
 
-            <Button
-              variant="secondary"
-              onClick={() => {
-                onClose();
-                onEdit(member);
-              }}
-            >
-              <Pencil size={15} className="mr-1.5 text-[var(--ink-muted)]" />
-              Editar
-            </Button>
+            {canManageMembers && (
+              <Button
+                variant="secondary"
+                className={canUseShepherding ? "" : "flex-1"}
+                onClick={() => {
+                  onClose();
+                  onEdit(member);
+                }}
+              >
+                <Pencil size={15} className="mr-1.5 text-[var(--ink-muted)]" />
+                Editar
+              </Button>
+            )}
           </div>
         )}
 
         {/* ── HISTÓRICO DE VISITAS DE PASTOREIO ── */}
-        {!member.is_self && (
+        {!isSelf && canUseShepherding && (
           <div className="flex flex-col gap-2.5 pt-2">
             <div className="flex items-center justify-between px-1">
               <h4 className="text-caption font-semibold uppercase tracking-wider text-[var(--ink-muted)]">
@@ -252,7 +264,7 @@ export function MemberDetailSheet({
           </div>
         )}
 
-        {member.is_self && (
+        {isSelf && canManageMembers && (
           <div className="pt-2">
             <Button
               variant="secondary"

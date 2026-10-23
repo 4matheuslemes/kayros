@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { PastoreioClient } from "./pastoreio-client";
+import { fetchUserPermissions } from "@/lib/permissions";
 
 export const metadata: Metadata = {
   title: "Registro de Pastoreio",
@@ -18,13 +19,8 @@ export default async function PastoreioPage() {
     redirect("/login");
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("is_elder")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile?.is_elder) {
+  const permissions = await fetchUserPermissions(supabase, user.id);
+  if (!permissions.canUseShepherding) {
     redirect("/");
   }
 

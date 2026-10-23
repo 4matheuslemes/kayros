@@ -16,14 +16,14 @@ export async function GET() {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
-    // 2. Verify caller is admin
+    // 2. Verify caller is admin or elder
     const { data: callerProfile } = await serverSupabase
       .from("profiles")
-      .select("is_admin")
+      .select("is_admin, is_elder")
       .eq("id", user.id)
       .single();
 
-    if (!callerProfile?.is_admin) {
+    if (!callerProfile?.is_admin && !callerProfile?.is_elder) {
       return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
     }
 
@@ -56,10 +56,12 @@ export async function GET() {
       page++;
     }
 
-    // 5. Fetch profiles
+    // 5. Fetch profiles with all permission columns
     const { data: profiles, error: profilesError } = await supabaseAdmin
       .from("profiles")
-      .select("id, full_name, talks_access");
+      .select(
+        "id, full_name, is_admin, is_elder, talks_access, hours_access, contacts_access, view_members, manage_members, shepherding_access, member_id"
+      );
 
     if (profilesError) {
       return NextResponse.json(
@@ -77,7 +79,15 @@ export async function GET() {
         id: u.id,
         email: u.email ?? "",
         full_name: p?.full_name ?? "",
+        is_admin: !!p?.is_admin,
+        is_elder: !!p?.is_elder,
         talks_access: !!p?.talks_access,
+        hours_access: !!p?.hours_access,
+        contacts_access: p?.contacts_access !== false,
+        view_members: !!p?.view_members,
+        manage_members: !!p?.manage_members,
+        shepherding_access: !!p?.shepherding_access,
+        member_id: p?.member_id ?? null,
       };
     });
 

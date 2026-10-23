@@ -18,7 +18,14 @@ interface ButtonRect {
 }
 
 export function NavMenu() {
-  const { talksAccess, isElder, isAdmin } = useUserPermissions();
+  const {
+    canUseContacts,
+    canUseHours,
+    canUseTalks,
+    canViewMembers,
+    canUseShepherding,
+    isElderOrAdmin,
+  } = useUserPermissions();
   const pathname = usePathname();
 
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -164,29 +171,46 @@ export function NavMenu() {
   }, [isMounted, isExpanded, isClosing]);
 
   const links = useMemo(() => {
-    const list = [
+    const list: Array<{ href: string; label: string }> = [
       { href: "/", label: "Início" },
-      { href: "/contatos", label: "Interessados" },
-      { href: "/historico", label: "Histórico" },
     ];
 
-    if (talksAccess) {
+    if (canUseContacts) {
+      list.push({ href: "/contatos", label: "Interessados" });
+    }
+
+    if (canUseHours) {
+      list.push({ href: "/historico", label: "Histórico e Progresso" });
+      list.push({ href: "/relatorio", label: "Relatório" });
+    }
+
+    if (canUseTalks) {
       list.push({ href: "/discursos", label: "Discursos" });
     }
 
-    if (isElder) {
-      list.push({ href: "/irmaos", label: "Irmãos" });
+    if (canViewMembers) {
+      list.push({ href: "/irmaos", label: "Irmãos e Grupos" });
+    }
+
+    if (canUseShepherding) {
       list.push({ href: "/pastoreio", label: "Registro de Pastoreio" });
     }
 
     list.push({ href: "/perfil", label: "Perfil" });
 
-    if (isAdmin) {
-      list.push({ href: "/convidar", label: "Convidar" });
+    if (isElderOrAdmin) {
+      list.push({ href: "/convidar", label: "Permissões e Convites" });
     }
 
     return list;
-  }, [talksAccess, isElder, isAdmin]);
+  }, [
+    canUseContacts,
+    canUseHours,
+    canUseTalks,
+    canViewMembers,
+    canUseShepherding,
+    isElderOrAdmin,
+  ]);
 
   return (
     <>

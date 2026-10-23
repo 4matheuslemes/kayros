@@ -18,6 +18,7 @@ import Link from "next/link";
 import { SecuritySettings } from "@/components/security/security-settings";
 import { calculateProjectedHours, ISO_DAY_TO_STRING } from "@/lib/goals/calculate-monthly-goal";
 import { formatHours } from "@/lib/format";
+import { useUserPermissions } from "@/contexts/user-permissions-context";
 
 const DAYS_OF_WEEK = [
   { id: 1, label: "SG" },
@@ -33,7 +34,7 @@ const schema = z.object({
   full_name:              z.string().min(1, "Nome obrigatório"),
   congregation_name:      z.string().optional(),
   monthly_goal_hours:     z.coerce.number().int().min(1).max(300),
-  working_days:           z.array(z.number()).min(1, "Selecione ao menos um dia"),
+  working_days:           z.array(z.number()),
   meeting_link:           z
     .string()
     .trim()
@@ -53,6 +54,8 @@ interface PerfilClientProps {
 
 export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
   const router = useRouter();
+  const { canUseHours, canUseShepherding, canViewMembers, isElderOrAdmin } =
+    useUserPermissions();
   const [saving, setSaving] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [editSection, setEditSection] = useState<"personal" | "schedule" | null>(null);
@@ -62,7 +65,7 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
     defaultValues: {
       full_name:          profile.full_name,
       congregation_name:  profile.congregation_name ?? "",
-      monthly_goal_hours: profile.monthly_goal_hours,
+      monthly_goal_hours: profile.monthly_goal_hours ?? 50,
       working_days:       profile.working_days ?? [1, 2, 3, 4, 5, 6, 7],
       weekly_schedule:    profile.weekly_schedule ?? {},
       meeting_link:       profile.meeting_link ?? "",
@@ -212,13 +215,14 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
           </div>
         </Card>
         </div>
-        {/* Schedule Card */}
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-1.5 px-1">
-            <CalendarDays size={14} className="text-[var(--ink-muted)]" />
-            <h2 className="text-caption font-semibold uppercase tracking-wider text-[var(--ink-muted)]">Metas e Programação</h2>
-          </div>
-          <Card>
+        {/* Schedule Card - Somente visível se canUseHours === true */}
+        {canUseHours && (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-1.5 px-1">
+              <CalendarDays size={14} className="text-[var(--ink-muted)]" />
+              <h2 className="text-caption font-semibold uppercase tracking-wider text-[var(--ink-muted)]">Metas e Programação</h2>
+            </div>
+            <Card>
 
           <div className="flex flex-col gap-5">
             <Field
@@ -365,6 +369,7 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
           </div>
         </Card>
         </div>
+        )}
       </form>
 
       {/* Settings & Quick Links */}
@@ -376,49 +381,51 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
         <Card padding="none" className="overflow-hidden">
           <div className="flex flex-col">
           <SecuritySettings />
-          <Link
-            href="/relatorio"
-            className="flex items-center gap-3 px-5 py-4 hover:bg-[var(--background)] transition-colors text-body-sm text-[var(--ink)]"
-          >
-            <FileText size={16} className="text-[var(--ink-muted)]" />
-            <div className="text-left">
-              <span className="text-body-sm text-[var(--ink)] block leading-tight">Relatório do mês</span>
-              <span className="text-caption text-[var(--ink-muted)] mt-0.5 block">Resumo para enviar</span>
-            </div>
-          </Link>
-          {profile.is_elder && (
-            <>
-              <Link
-                href="/pastoreio"
-                className="flex items-center gap-3 px-5 py-4 hover:bg-[var(--background)] transition-colors text-body-sm text-[var(--ink)]"
-              >
-                <HeartHandshake size={16} className="text-[var(--primary)]" />
-                <div className="text-left">
-                  <span className="text-body-sm font-medium text-[var(--ink)] block leading-tight">Registro de Pastoreio</span>
-                  <span className="text-caption text-[var(--ink-muted)] mt-0.5 block">Visitas pastorais confidenciais</span>
-                </div>
-              </Link>
-              <Link
-                href="/irmaos"
-                className="flex items-center gap-3 px-5 py-4 hover:bg-[var(--background)] transition-colors text-body-sm text-[var(--ink)]"
-              >
-                <Users size={16} className="text-[var(--primary)]" />
-                <div className="text-left">
-                  <span className="text-body-sm font-medium text-[var(--ink)] block leading-tight">Irmãos</span>
-                  <span className="text-caption text-[var(--ink-muted)] mt-0.5 block">Cadastro e histórico de congregação</span>
-                </div>
-              </Link>
-            </>
+          {canUseHours && (
+            <Link
+              href="/relatorio"
+              className="flex items-center gap-3 px-5 py-4 hover:bg-[var(--background)] transition-colors text-body-sm text-[var(--ink)]"
+            >
+              <FileText size={16} className="text-[var(--ink-muted)]" />
+              <div className="text-left">
+                <span className="text-body-sm text-[var(--ink)] block leading-tight">Relatório do mês</span>
+                <span className="text-caption text-[var(--ink-muted)] mt-0.5 block">Resumo para enviar</span>
+              </div>
+            </Link>
           )}
-          {profile.is_admin && (
+          {canUseShepherding && (
+            <Link
+              href="/pastoreio"
+              className="flex items-center gap-3 px-5 py-4 hover:bg-[var(--background)] transition-colors text-body-sm text-[var(--ink)]"
+            >
+              <HeartHandshake size={16} className="text-[var(--primary)]" />
+              <div className="text-left">
+                <span className="text-body-sm font-medium text-[var(--ink)] block leading-tight">Registro de Pastoreio</span>
+                <span className="text-caption text-[var(--ink-muted)] mt-0.5 block">Visitas pastorais confidenciais</span>
+              </div>
+            </Link>
+          )}
+          {canViewMembers && (
+            <Link
+              href="/irmaos"
+              className="flex items-center gap-3 px-5 py-4 hover:bg-[var(--background)] transition-colors text-body-sm text-[var(--ink)]"
+            >
+              <Users size={16} className="text-[var(--primary)]" />
+              <div className="text-left">
+                <span className="text-body-sm font-medium text-[var(--ink)] block leading-tight">Irmãos e Grupos</span>
+                <span className="text-caption text-[var(--ink-muted)] mt-0.5 block">Lista congregacional e grupos de serviço</span>
+              </div>
+            </Link>
+          )}
+          {isElderOrAdmin && (
             <Link
               href="/convidar"
               className="flex items-center gap-3 px-5 py-4 hover:bg-[var(--background)] transition-colors text-body-sm text-[var(--ink)]"
             >
               <User size={16} className="text-[var(--ink-muted)]" />
               <div className="text-left">
-                <span className="text-body-sm text-[var(--ink)] block leading-tight">Convidar usuários</span>
-                <span className="text-caption text-[var(--ink-muted)] mt-0.5 block">Gerar link de acesso</span>
+                <span className="text-body-sm text-[var(--ink)] block leading-tight">Permissões e Convites</span>
+                <span className="text-caption text-[var(--ink-muted)] mt-0.5 block">Gerenciar acessos da congregação</span>
               </div>
             </Link>
           )}

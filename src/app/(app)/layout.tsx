@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { AppShellClient } from "./app-shell-client";
+import { fetchUserPermissions, EMPTY_PERMISSIONS } from "@/lib/permissions";
 
 export default async function AppLayout({
   children,
@@ -11,28 +12,12 @@ export default async function AppLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
-  let talksAccess = false;
-  let isElder = false;
-  let isAdmin = false;
-
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("talks_access, is_elder, is_admin")
-      .eq("id", user.id)
-      .single();
-
-    talksAccess = !!profile?.talks_access;
-    isElder = !!profile?.is_elder;
-    isAdmin = !!profile?.is_admin;
-  }
+  const permissions = user
+    ? await fetchUserPermissions(supabase, user.id)
+    : EMPTY_PERMISSIONS;
 
   return (
-    <AppShellClient
-      talksAccess={talksAccess}
-      isElder={isElder}
-      isAdmin={isAdmin}
-    >
+    <AppShellClient permissions={permissions}>
       {children}
     </AppShellClient>
   );

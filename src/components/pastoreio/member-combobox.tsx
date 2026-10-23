@@ -12,13 +12,15 @@ export interface MemberOption {
 }
 
 interface MemberComboboxProps {
-  label: string;
+  label?: string;
   hint?: string;
   error?: string;
   required?: boolean;
   members: MemberOption[];
-  selectedMemberId: string | null;
-  onSelectMember: (member: MemberOption | null) => void;
+  selectedMemberId?: string | null;
+  value?: string | null;
+  onSelectMember?: (member: MemberOption | null) => void;
+  onChange?: (memberId: string | null) => void;
   placeholder?: string;
   emptyText?: string;
   disabled?: boolean;
@@ -32,7 +34,9 @@ export function MemberCombobox({
   required,
   members,
   selectedMemberId,
+  value,
   onSelectMember,
+  onChange,
   placeholder = "Digite o nome do acompanhante...",
   emptyText = "Nenhum irmão encontrado",
   disabled = false,
@@ -40,6 +44,8 @@ export function MemberCombobox({
 }: MemberComboboxProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+
+  const currentMemberId = selectedMemberId !== undefined ? selectedMemberId : (value ?? null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -57,9 +63,9 @@ export function MemberCombobox({
   }, [open]);
 
   const selectedMember = useMemo(() => {
-    if (!selectedMemberId) return null;
-    return members.find((m) => m.id === selectedMemberId) || null;
-  }, [members, selectedMemberId]);
+    if (!currentMemberId) return null;
+    return members.find((m) => m.id === currentMemberId) || null;
+  }, [members, currentMemberId]);
 
   const filteredMembers = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -74,14 +80,16 @@ export function MemberCombobox({
   };
 
   const handleSelect = (member: MemberOption) => {
-    onSelectMember(member);
+    onSelectMember?.(member);
+    onChange?.(member.id);
     setSearch("");
     setOpen(false);
   };
 
   const handleClear = (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    onSelectMember(null);
+    onSelectMember?.(null);
+    onChange?.(null);
     setSearch("");
     setOpen(true);
     setTimeout(() => {
@@ -108,12 +116,14 @@ export function MemberCombobox({
 
   return (
     <div className={cn("flex flex-col gap-1.5 relative", className)} ref={containerRef}>
-      <label className="text-label text-[var(--ink)] flex items-center justify-between">
-        <span>
-          {label}
-          {required && <span className="text-red-500 ml-1" aria-hidden>*</span>}
-        </span>
-      </label>
+      {label && (
+        <label className="text-label text-[var(--ink)] flex items-center justify-between">
+          <span>
+            {label}
+            {required && <span className="text-red-500 ml-1" aria-hidden>*</span>}
+          </span>
+        </label>
+      )}
 
       {/* Main Box - Direct Input */}
       <div
@@ -197,7 +207,7 @@ export function MemberCombobox({
             </div>
           ) : (
             filteredMembers.map((m) => {
-              const isSelected = selectedMemberId === m.id;
+              const isSelected = currentMemberId === m.id;
               const appLabel = formatAppointment(m.appointment);
               return (
                 <button
