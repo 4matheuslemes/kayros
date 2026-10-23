@@ -44,7 +44,6 @@ export function PastoreioFormSheet({
   const [saving, setSaving] = useState(false);
   const [members, setMembers] = useState<MemberOption[]>([]);
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
-  const [otherPeople, setOtherPeople] = useState<string[]>([]);
   const [selectedCompanionId, setSelectedCompanionId] = useState<string | null>(null);
   const [visitedError, setVisitedError] = useState<string | null>(null);
   const [savedVisitId, setSavedVisitId] = useState<string | null>(null);
@@ -127,10 +126,14 @@ export function PastoreioFormSheet({
       });
 
       setSelectedCompanionId(initialData.companion_member_id || null);
-      setOtherPeople(initialData.other_people || []);
       setIsNextVisitManuallyEdited(true);
 
-      // Load linked members for this visit
+      // Initialize selectedMemberIds if already present in object
+      if (initialData.member_ids && initialData.member_ids.length > 0) {
+        setSelectedMemberIds(initialData.member_ids);
+      }
+
+      // Load linked members for this visit from database
       let isMounted = true;
       const loadLinkedMembers = async () => {
         try {
@@ -145,7 +148,7 @@ export function PastoreioFormSheet({
             setSelectedMemberIds(ids);
           }
         } catch {
-          // Mantém vazio se falhar
+          // Mantém se já tiver
         }
       };
 
@@ -170,7 +173,6 @@ export function PastoreioFormSheet({
 
       setIsNextVisitManuallyEdited(false);
       setSelectedCompanionId(null);
-      setOtherPeople([]);
 
       if (preselectedMemberId) {
         setSelectedMemberIds([preselectedMemberId]);
@@ -211,18 +213,6 @@ export function PastoreioFormSheet({
     setSelectedMemberIds((prev) => prev.filter((id) => id !== memberId));
   }, []);
 
-  const handleAddOtherPerson = useCallback((name: string) => {
-    setOtherPeople((prev) => {
-      const next = [...prev, name];
-      if (next.length > 0) setVisitedError(null);
-      return next;
-    });
-  }, []);
-
-  const handleRemoveOtherPerson = useCallback((index: number) => {
-    setOtherPeople((prev) => prev.filter((_, idx) => idx !== index));
-  }, []);
-
   // Companion selection handler
   const handleSelectCompanion = useCallback(
     (c: MemberOption | null) => {
@@ -242,16 +232,14 @@ export function PastoreioFormSheet({
       .map((id) => members.find((m) => m.id === id)?.full_name)
       .filter(Boolean) as string[];
 
-    const allNames = [...memberNames, ...otherPeople];
-
-    if (allNames.length === 0) {
+    if (memberNames.length === 0) {
       setVisitedError("Escolha pelo menos uma pessoa");
       return;
     }
     setVisitedError(null);
     setSaving(true);
 
-    const summary = allNames.join(", ");
+    const summary = memberNames.join(", ");
     const supabase = createClient();
 
     const visitIdToUpdate = savedVisitId || initialData?.id;
@@ -263,7 +251,6 @@ export function PastoreioFormSheet({
       next_visit_date: data.next_visit_date || null,
       report: data.report?.trim() || null,
       companion_member_id: selectedCompanionId || null,
-      other_people: otherPeople,
       member_id: null, // Legado: não gravamos mais
     };
 
@@ -315,7 +302,6 @@ export function PastoreioFormSheet({
       onSaved({
         ...savedVisit,
         member_ids: selectedMemberIds,
-        other_people: otherPeople,
       });
       onClose();
     } catch (err: unknown) {
@@ -334,7 +320,7 @@ export function PastoreioFormSheet({
       description="Responsabilidade pastoral confidencial"
     >
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 mt-2" noValidate>
-        {/* ── 1. QUEM FOI VISITADO (CAMPO ÚNICO COM MÚLTIPLOS MEMBROS E OUTRAS PESSOAS) ── */}
+        {/* ── 1. QUEM FOI VISITADO (MÚLTIPLA SELEÇÃO FLUIDA COM TAG/CHIPS) ── */}
         <MemberMultiCombobox
           label="Quem foi visitado"
           required
@@ -343,9 +329,6 @@ export function PastoreioFormSheet({
           selectedMemberIds={selectedMemberIds}
           onToggleMember={handleToggleMember}
           onRemoveMember={handleRemoveMember}
-          otherPeople={otherPeople}
-          onAddOtherPerson={handleAddOtherPerson}
-          onRemoveOtherPerson={handleRemoveOtherPerson}
         />
 
         {/* ── 2. DATA DA VISITA ── */}
@@ -363,12 +346,12 @@ export function PastoreioFormSheet({
           />
         </Field>
 
-        {/* ── 3. QUEM ACOMPANHOU (ANCIÃOS OU SERVOS MINISTERIAIS) ── */}
+        {/* ── 3. QUEM ACOMPANHOU (ANCIÃOS OU SERVOS MINISTERIAIS - SELEÇÃO ÚNICA COM INPUT DIRETO) ── */}
         {appointedCompanions.length > 0 ? (
           <MemberCombobox
             label="Quem acompanhou"
             hint="Apenas anciãos ou servos ministeriais (opcional)"
-            placeholder="Selecione o acompanhante (ou nenhum)..."
+            placeholder="Digite o nome do acompanhante..."
             emptyText="Nenhum ancião ou servo encontrado"
             members={appointedCompanions}
             selectedMemberId={selectedCompanionId}

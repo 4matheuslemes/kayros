@@ -21,6 +21,7 @@ import type {
   CongregationMember,
   CongregationAppointment,
   CongregationServiceStatus,
+  ServiceGroup,
 } from "@/lib/types/congregation";
 import { Archive, ArchiveRestore, Trash2, AlertTriangle } from "lucide-react";
 
@@ -33,6 +34,7 @@ const schema = z.object({
     "pioneiro_regular",
     "pioneiro_auxiliar_continuo",
   ]),
+  group_id: z.string().optional(),
   active: z.boolean(),
 });
 
@@ -43,6 +45,7 @@ interface MemberFormSheetProps {
   onClose: () => void;
   userId: string;
   initialData?: CongregationMember | null;
+  groups?: ServiceGroup[];
   onSaved: (savedMember: CongregationMember) => void;
   onDeleted?: (memberId: string) => void;
 }
@@ -52,6 +55,7 @@ export function MemberFormSheet({
   onClose,
   userId,
   initialData,
+  groups = [],
   onSaved,
   onDeleted,
 }: MemberFormSheetProps) {
@@ -72,6 +76,7 @@ export function MemberFormSheet({
       full_name: "",
       appointment: "none",
       service_status: "publicador_batizado",
+      group_id: "none",
       active: true,
     },
   });
@@ -85,6 +90,7 @@ export function MemberFormSheet({
           full_name: initialData.full_name,
           appointment: initialData.appointment ?? "none",
           service_status: initialData.service_status,
+          group_id: initialData.group_id ?? "none",
           active: initialData.active,
         });
       } else {
@@ -92,6 +98,7 @@ export function MemberFormSheet({
           full_name: "",
           appointment: "none",
           service_status: "publicador_batizado",
+          group_id: "none",
           active: true,
         });
       }
@@ -106,6 +113,8 @@ export function MemberFormSheet({
       const appValue: CongregationAppointment | null =
         data.appointment === "none" ? null : (data.appointment as CongregationAppointment);
 
+      const chosenGroupId = data.group_id && data.group_id !== "none" ? data.group_id : null;
+
       if (initialData?.id) {
         // Update
         const { data: updated, error } = await supabase
@@ -114,6 +123,7 @@ export function MemberFormSheet({
             full_name: data.full_name.trim(),
             appointment: appValue,
             service_status: data.service_status as CongregationServiceStatus,
+            group_id: chosenGroupId,
             active: data.active,
             updated_at: new Date().toISOString(),
           })
@@ -134,6 +144,7 @@ export function MemberFormSheet({
             full_name: data.full_name.trim(),
             appointment: appValue,
             service_status: data.service_status as CongregationServiceStatus,
+            group_id: chosenGroupId,
             active: data.active,
           })
           .select()
@@ -259,6 +270,25 @@ export function MemberFormSheet({
                 { value: "pioneiro_auxiliar_continuo", label: "Pioneiro auxiliar contínuo" },
               ]}
               {...register("service_status")}
+            />
+          </Field>
+
+          {/* Grupo de serviço */}
+          <Field
+            label="Grupo de serviço"
+            htmlFor="member-group"
+            hint="Grupo de serviço de campo do irmão (opcional)"
+          >
+            <Select
+              id="member-group"
+              options={[
+                { value: "none", label: "Sem grupo" },
+                ...groups.map((g) => ({
+                  value: g.id,
+                  label: `${g.sort_order}. ${g.name}`,
+                })),
+              ]}
+              {...register("group_id")}
             />
           </Field>
 
