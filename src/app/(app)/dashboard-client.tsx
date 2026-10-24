@@ -179,57 +179,39 @@ export function DashboardClient({
             </div>
           </div>
 
-          {/* Cartão Visual Central dentro do Hero */}
+          {/* ─────────────────────────────────────────────────────────
+              A) NO MOBILE (< 1024px): Foco em Campo
+              O Registro de Tempo é o protagonista no topo, seguindo
+              fielmente o padrão visual do Meta do Mês e da Agenda
+          ───────────────────────────────────────────────────────── */}
+          <div className="lg:hidden max-w-xl mx-auto w-full mt-8">
+            {perms.canUseHours ? (
+              <HoursRegistrationCard
+                userId={userId}
+                onRecordSaved={refresh}
+              />
+            ) : (
+              <AgendaCalendar
+                userId={userId}
+                profile={profile}
+              />
+            )}
+          </div>
+
+          {/* ─────────────────────────────────────────────────────────
+              B) NO DESKTOP (>= 1024px): Central de Mesa / Preparação
+              Trabalho de mesa em destaque + horas como coadjuvante discreto
+          ───────────────────────────────────────────────────────── */}
           <div
             className={cn(
-              "rounded-[32px] lg:rounded-[40px]",
+              "hidden lg:flex flex-col gap-6",
+              "rounded-[40px]",
               "bg-[var(--surface)] dark:bg-[#121A29]",
-              "p-5 sm:p-7 lg:p-9",
-              "shadow-[0_12px_36px_rgba(0,0,0,0.08)] dark:shadow-[0_12px_36px_rgba(0,0,0,0.4)]",
-              "border border-black/5 dark:border-white/10",
-              "max-w-4xl mx-auto w-full mt-8 lg:mt-12",
-              "flex flex-col gap-6"
+              "p-8 lg:p-9",
+              "shadow-xs border border-black/5 dark:border-white/10",
+              "max-w-4xl mx-auto w-full mt-12"
             )}
           >
-            {/* ─────────────────────────────────────────────────────────
-                A) NO MOBILE (< 1024px): Foco em Campo
-                Cronômetro/Horas é o protagonista no topo!
-            ───────────────────────────────────────────────────────── */}
-            <div className="lg:hidden">
-              {perms.canUseHours ? (
-                <HoursRegistrationCard
-                  userId={userId}
-                  onRecordSaved={refresh}
-                  className="border-0 shadow-none bg-transparent p-0"
-                />
-              ) : (
-                <div className="flex flex-col gap-5">
-                  <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]/60">
-                    <div className="flex items-center gap-2 text-xs font-semibold text-[var(--ink-muted)] tracking-wider uppercase">
-                      <Calendar size={14} className="text-[var(--primary)]" />
-                      <span>Destaque de Hoje & Ministério</span>
-                    </div>
-                    {myGroupInfo && (
-                      <span className="text-xs font-medium text-[var(--ink)] bg-[var(--panel)] px-3 py-1 rounded-full">
-                        {myGroupInfo.sort_order}. {myGroupInfo.name}
-                      </span>
-                    )}
-                  </div>
-
-                  <AgendaCalendar
-                    userId={userId}
-                    profile={profile}
-                    className="p-0 bg-transparent rounded-none shadow-none"
-                  />
-                </div>
-              )}
-            </div>
-
-            {/* ─────────────────────────────────────────────────────────
-                B) NO DESKTOP (>= 1024px): Central de Mesa / Preparação
-                Trabalho de mesa em destaque + horas como coadjuvante discreto
-            ───────────────────────────────────────────────────────── */}
-            <div className="hidden lg:flex flex-col gap-6">
               {/* Grid de trabalho de mesa (Discursos, Pastoreio/Irmãos, Estudos) */}
               <div
                 className={cn(
@@ -511,7 +493,6 @@ export function DashboardClient({
                 </div>
               )}
             </div>
-          </div>
         </section>
       </Reveal>
 
