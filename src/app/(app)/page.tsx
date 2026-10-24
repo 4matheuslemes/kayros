@@ -70,6 +70,7 @@ export default async function DashboardPage() {
 
   let pastoralData: {
     dueCount: number;
+    totalActive: number;
     dueMembers?: Array<{ id: string; name: string }>;
     latestVisit: {
       family_or_person: string;
@@ -126,6 +127,7 @@ export default async function DashboardPage() {
 
     pastoralData = {
       dueCount,
+      totalActive: activeMembersRes.data?.length ?? 0,
       dueMembers,
       latestVisit: latestVisitRes.data
         ? {
@@ -134,6 +136,17 @@ export default async function DashboardPage() {
             created_by_name: latestVisitRes.data.created_by_name,
           }
         : null,
+    };
+  } else if (permissions.canViewMembers) {
+    const { count } = await supabase
+      .from("congregation_members")
+      .select("id", { count: "exact", head: true })
+      .eq("active", true);
+
+    pastoralData = {
+      dueCount: 0,
+      totalActive: count ?? 0,
+      latestVisit: null,
     };
   }
 
