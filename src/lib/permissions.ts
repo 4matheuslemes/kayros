@@ -117,7 +117,13 @@ export function isCurrentUserMember(
 // ─────────────────────────────────────────────────────────────
 // Barra flutuante inferior
 // ─────────────────────────────────────────────────────────────
-export type FloatingNavId = "inicio" | "interessados" | "historico" | "discursos";
+export type FloatingNavId =
+  | "inicio"
+  | "interessados"
+  | "discursos"
+  | "irmaos"
+  | "pastoreio"
+  | "historico";
 
 export function isFloatingItemAllowed(
   id: FloatingNavId,
@@ -130,6 +136,10 @@ export function isFloatingItemAllowed(
       return permissions.canUseHours;
     case "discursos":
       return permissions.canUseTalks;
+    case "irmaos":
+      return permissions.canViewMembers;
+    case "pastoreio":
+      return permissions.canUseShepherding;
     case "inicio":
     default:
       return true;

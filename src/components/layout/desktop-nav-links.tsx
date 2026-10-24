@@ -14,28 +14,29 @@ export function DesktopNavLinks({ className }: { className?: string }) {
     { href: "/contatos", label: "Interessados", allowed: perms.canUseContacts },
     { href: "/discursos", label: "Discursos", allowed: perms.canUseTalks },
     { href: "/irmaos", label: "Irmãos", allowed: perms.canViewMembers },
+    { href: "/pastoreio", label: "Pastoreio", allowed: perms.canUseShepherding },
   ].filter((link) => link.allowed);
 
   return (
     <nav
-      className={cn("hidden lg:flex items-center gap-6", className)}
-      aria-label="Navegação rápida"
+      className={cn("hidden lg:flex items-center gap-1", className)}
+      aria-label="Módulos operacionais"
     >
       {links.map((link) => {
         const active =
           link.href === "/"
             ? pathname === "/"
-            : pathname?.startsWith(link.href);
+            : pathname === link.href || pathname?.startsWith(link.href + "/");
 
         return (
           <Link
             key={link.href}
             href={link.href}
             className={cn(
-              "text-sm font-medium transition-colors",
+              "px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-150 select-none",
               active
-                ? "text-[var(--ink)] font-semibold"
-                : "text-[var(--ink-muted)] hover:text-[var(--primary)]"
+                ? "bg-[var(--primary)] text-white shadow-xs font-semibold"
+                : "text-[var(--ink-muted)] hover:text-[var(--ink)] hover:bg-black/5 dark:hover:bg-white/5"
             )}
             aria-current={active ? "page" : undefined}
           >

@@ -5,36 +5,25 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect, useMemo } from "react";
 import {
   Home,
-  ScrollText,
   Users,
   BookOpenText,
-  ArrowUp,
-  Search,
+  UsersRound,
+  HeartHandshake,
+  ChevronUp,
+  User,
+  ScrollText,
+  FileText,
+  UserPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { lightTap } from "@/lib/haptics";
-import { FLOATING_NAV_ITEMS } from "@/lib/constants";
 import { useUserPermissions } from "@/contexts/user-permissions-context";
-import {
-  type UserPermissions,
-  type FloatingNavId,
-  isFloatingItemAllowed,
-} from "@/lib/permissions";
+import { type UserPermissions } from "@/lib/permissions";
 
 interface BottomNavProps {
   permissions?: UserPermissions;
   talksAccess?: boolean;
 }
-
-const FLOATING_ITEM_CONFIG: Record<
-  FloatingNavId,
-  { href: string; icon: typeof Home; label: string }
-> = {
-  inicio: { href: "/", icon: Home, label: "Início" },
-  interessados: { href: "/contatos", icon: Users, label: "Interessados" },
-  historico: { href: "/historico", icon: ScrollText, label: "Histórico" },
-  discursos: { href: "/discursos", icon: BookOpenText, label: "Discursos" },
-};
 
 export function BottomNav({ permissions: propPermissions }: BottomNavProps) {
   const contextPermissions = useUserPermissions();
@@ -42,67 +31,189 @@ export function BottomNav({ permissions: propPermissions }: BottomNavProps) {
 
   const pathname = usePathname();
   const [optimisticPath, setOptimisticPath] = useState(pathname);
-  const [hasScrolledPastHero, setHasScrolledPastHero] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [timerText, setTimerText] = useState<string | null>(null);
 
-  // Sync with actual pathname when it changes
+  // Sync with actual pathname when it changes and expand
   useEffect(() => {
     setOptimisticPath(pathname);
+    setIsCollapsed(false);
   }, [pathname]);
 
-  // Listen to window scroll on desktop
+  // Monitor scroll direction (Apple Music behavior)
   useEffect(() => {
+    let lastY = window.scrollY || document.documentElement.scrollTop;
+
     const handleScroll = () => {
-      const scrollY = window.scrollY || document.documentElement.scrollTop;
-      setHasScrolledPastHero(scrollY > 280);
+      const currentY = window.scrollY || document.documentElement.scrollTop;
+      const deltaY = currentY - lastY;
+
+      if (currentY < 50 || deltaY < -8) {
+        setIsCollapsed(false);
+      } else if (currentY > 60 && deltaY > 10) {
+        setIsCollapsed(true);
+      }
+
+      lastY = currentY;
     };
 
-    handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Monitor active timer in localStorage
+  useEffect(() => {
+    const checkTimer = () => {
+      try {
+        const raw = localStorage.getItem("kairos_timer");
+        if (!raw) {
+          setTimerText(null);
+          return;
+        }
+        const data = JSON.parse(raw);
+        if (data.state === "running" && data.startedAt) {
+          const totalSec =
+            (data.elapsed || 0) +
+            Math.floor((Date.now() - data.startedAt) / 1000);
+          const h = Math.floor(totalSec / 3600);
+          const m = Math.floor((totalSec % 3600) / 60);
+          const s = totalSec % 60;
+          if (h > 0) {
+            setTimerText(
+              `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
+            );
+          } else {
+            setTimerText(
+              `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
+            );
+          }
+        } else {
+          setTimerText(null);
+        }
+      } catch {
+        setTimerText(null);
+      }
+    };
+
+    checkTimer();
+    const interval = setInterval(checkTimer, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Allowed operational items:
+  // 1. Início (/) - always
+  // 2. Interessados (/contatos) - canUseContacts
+  // 3. Discursos (/discursos) - canUseTalks
+  // 4. Irmãos (/irmaos) - canViewMembers
+  // 5. Pastoreio (/pastoreio) - canUseShepherding
   const navItems = useMemo(() => {
-    return (FLOATING_NAV_ITEMS as readonly FloatingNavId[])
-      .filter((id) => isFloatingItemAllowed(id, permissions))
-      .map((id) => FLOATING_ITEM_CONFIG[id])
-      .filter(Boolean);
+    const items = [
+      {
+        href: "/",
+        icon: Home,
+        label: "Início",
+        allowed: true,
+      },
+      {
+        href: "/contatos",
+        icon: Users,
+        label: "Interessados",
+        allowed: permissions.canUseContacts,
+      },
+      {
+        href: "/discursos",
+        icon: BookOpenText,
+        label: "Discursos",
+        allowed: permissions.canUseTalks,
+      },
+      {
+        href: "/irmaos",
+        icon: UsersRound,
+        label: "Irmãos",
+        allowed: permissions.canViewMembers,
+      },
+      {
+        href: "/pastoreio",
+        icon: HeartHandshake,
+        label: "Pastoreio",
+        allowed: permissions.canUseShepherding,
+      },
+    ];
+
+    return items.filter((item) => item.allowed);
   }, [permissions]);
 
-  const scrollToTop = () => {
-    lightTap();
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  // Section info for mini-pill state
+  const currentSection = useMemo(() => {
+    const path = optimisticPath || "/";
+    if (path === "/") return { icon: Home, label: "Início" };
+    if (path.startsWith("/contatos")) return { icon: Users, label: "Interessados" };
+    if (path.startsWith("/discursos")) return { icon: BookOpenText, label: "Discursos" };
+    if (path.startsWith("/irmaos")) return { icon: UsersRound, label: "Irmãos" };
+    if (path.startsWith("/pastoreio")) return { icon: HeartHandshake, label: "Pastoreio" };
+    if (path.startsWith("/perfil")) return { icon: User, label: "Perfil" };
+    if (path.startsWith("/historico")) return { icon: ScrollText, label: "Histórico" };
+    if (path.startsWith("/relatorio")) return { icon: FileText, label: "Relatório" };
+    if (path.startsWith("/convidar")) return { icon: UserPlus, label: "Convites" };
+    return { icon: Home, label: "Início" };
+  }, [optimisticPath]);
 
   if (navItems.length === 0) {
     return null;
   }
 
-  const isCompact = navItems.length <= 2;
+  const CurrentIcon = currentSection.icon;
 
   return (
-    <>
-      {/* ─────────────────────────────────────────────────────────────
-          1. Mobile Floating Bottom Bar (< 1024px)
-      ───────────────────────────────────────────────────────────── */}
-      <nav
-        className={cn(
-          "fixed z-40 lg:hidden",
-          "bottom-[calc(env(safe-area-inset-bottom)+1rem)]",
-          isCompact
-            ? "left-0 right-0 mx-auto w-fit max-w-[calc(100vw-2rem)] px-2"
-            : "left-4 right-4 mx-auto max-w-md",
-          "border border-black/10 dark:border-white/15 rounded-full",
-          "shadow-[0_8px_30px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.8)]",
-          "dark:shadow-[0_8px_30px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.15)]",
-          "flex items-stretch overflow-hidden",
-          "h-[60px]"
-        )}
-        style={{
-          backgroundColor: "color-mix(in srgb, var(--surface) 97%, transparent)",
-        }}
-        aria-label="Navegação mobile"
-      >
-        {navItems.map(({ href, icon: Icon, label }) => {
+    <nav
+      aria-label="Navegação principal"
+      className={cn(
+        "lg:hidden",
+        "fixed z-40 bottom-[calc(env(safe-area-inset-bottom)+1rem)] left-1/2 -translate-x-1/2",
+        "transition-all duration-350 ease-[cubic-bezier(0.22,1,0.36,1)] select-none",
+        "border border-[var(--border)]/70 shadow-[var(--shadow-card)] rounded-full",
+        "bg-[var(--surface)]/88 backdrop-blur-xl",
+        isCollapsed
+          ? "h-11 px-4 flex items-center gap-2 cursor-pointer shadow-md hover:scale-[1.02] active:scale-95"
+          : "px-2 py-1.5 flex items-center gap-1 sm:gap-1.5 max-w-[calc(100vw-1.5rem)] overflow-x-auto no-scrollbar"
+      )}
+      onClick={isCollapsed ? () => { lightTap(); setIsCollapsed(false); } : undefined}
+      role={isCollapsed ? "button" : undefined}
+      tabIndex={isCollapsed ? 0 : undefined}
+      onKeyDown={
+        isCollapsed
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setIsCollapsed(false);
+              }
+            }
+          : undefined
+      }
+    >
+      {isCollapsed ? (
+        // Estado 2 — Mini-pílula compacta
+        <div className="flex items-center gap-2 text-xs font-medium text-[var(--ink)] whitespace-nowrap">
+          <CurrentIcon
+            size={18}
+            className="text-[var(--primary)] shrink-0"
+            strokeWidth={2.2}
+          />
+          <span className="font-sans font-medium">{currentSection.label}</span>
+          {timerText && (
+            <span className="text-xs font-mono font-semibold text-[var(--accent)] shrink-0 flex items-center gap-1">
+              • ⏱ {timerText}
+            </span>
+          )}
+          <ChevronUp
+            size={14}
+            className="text-[var(--ink-muted)] shrink-0 ml-0.5"
+            strokeWidth={2.2}
+          />
+        </div>
+      ) : (
+        // Estado 1 — Expandida com itens operacionais
+        navItems.map(({ href, icon: Icon, label }) => {
           const active =
             href === "/"
               ? optimisticPath === "/"
@@ -118,104 +229,26 @@ export function BottomNav({ permissions: propPermissions }: BottomNavProps) {
                 setOptimisticPath(href);
               }}
               className={cn(
-                "flex-1 flex flex-col items-center justify-center gap-0.5",
-                isCompact ? "px-5 sm:px-6 min-w-[96px]" : "px-0.5 min-w-[64px]",
-                "min-h-[44px] transition-all duration-100 active:scale-90",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)]",
+                "flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-full transition-all duration-150",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]",
                 active
-                  ? "text-[var(--primary)] font-semibold"
-                  : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
+                  ? "bg-[var(--primary)] text-white shadow-xs"
+                  : "text-[var(--ink-muted)] hover:text-[var(--ink)] hover:bg-black/5 dark:hover:bg-white/5 active:scale-95"
               )}
               aria-current={active ? "page" : undefined}
             >
               <Icon
-                className={cn(
-                  "transition-transform duration-150",
-                  active ? "scale-110" : ""
-                )}
-                size={20}
+                size={18}
                 strokeWidth={active ? 2.25 : 1.75}
+                className="shrink-0"
               />
-              <span className="text-[11px] font-medium font-sans leading-none tracking-normal whitespace-nowrap text-center">
+              <span className="text-[11px] font-medium font-sans whitespace-nowrap">
                 {label}
               </span>
             </Link>
           );
-        })}
-      </nav>
-
-      {/* ─────────────────────────────────────────────────────────────
-          2. Desktop Floating Pill (>= 1024px)
-          Estilo America.gov: só aparece ao rolar a página para baixo
-          quando o Hero sai da tela.
-      ───────────────────────────────────────────────────────────── */}
-      <nav
-        className={cn(
-          "hidden lg:flex fixed z-40 bottom-6 left-1/2 -translate-x-1/2",
-          "h-[60px] rounded-full",
-          "border border-[var(--border)]",
-          "bg-[var(--surface)]/95 backdrop-blur-md",
-          "shadow-[0_12px_36px_rgba(0,0,0,0.12)] dark:shadow-[0_12px_36px_rgba(0,0,0,0.45)]",
-          "items-center justify-between px-3 pl-5 gap-6",
-          "transition-all duration-300 ease-out",
-          hasScrolledPastHero
-            ? "opacity-100 translate-y-0 pointer-events-auto"
-            : "opacity-0 translate-y-6 pointer-events-none"
-        )}
-        style={{
-          width: "min(calc(100vw - 48px), 520px)",
-        }}
-        aria-label="Barra flutuante de atalhos e busca"
-      >
-        {/* Navigation shortcuts */}
-        <div className="flex items-center gap-5">
-          {navItems.map(({ href, icon: Icon, label }) => {
-            const active =
-              href === "/"
-                ? optimisticPath === "/"
-                : optimisticPath.startsWith(href);
-
-            return (
-              <Link
-                key={href}
-                href={href}
-                prefetch={true}
-                onClick={() => {
-                  lightTap();
-                  setOptimisticPath(href);
-                }}
-                className={cn(
-                  "flex items-center gap-2 py-1.5 px-2.5 rounded-full text-xs font-medium transition-all duration-150",
-                  active
-                    ? "bg-[var(--primary)] text-white shadow-xs"
-                    : "text-[var(--ink-muted)] hover:text-[var(--ink)] hover:bg-black/5 dark:hover:bg-white/5"
-                )}
-                aria-current={active ? "page" : undefined}
-              >
-                <Icon size={16} strokeWidth={active ? 2.25 : 1.75} />
-                <span>{label}</span>
-              </Link>
-            );
-          })}
-        </div>
-
-        {/* Right circular navy button (#1E3A5F) for scroll to top / hero search */}
-        <button
-          type="button"
-          onClick={scrollToTop}
-          aria-label="Voltar ao topo da página"
-          title="Voltar ao topo"
-          className={cn(
-            "w-11 h-11 rounded-full shrink-0",
-            "bg-[var(--primary)] text-white",
-            "flex items-center justify-center",
-            "shadow-sm hover:opacity-95 active:scale-95 transition-all duration-150",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-          )}
-        >
-          <ArrowUp size={18} strokeWidth={2.25} />
-        </button>
-      </nav>
-    </>
+        })
+      )}
+    </nav>
   );
 }

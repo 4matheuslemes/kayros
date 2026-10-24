@@ -16,6 +16,7 @@ import {
   Plus,
 } from "lucide-react";
 import { NavMenu } from "@/components/layout/nav-menu";
+import { DesktopNavLinks } from "@/components/layout/desktop-nav-links";
 import { SyncStatusIndicator } from "@/components/layout/sync-status-indicator";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { DailyEncouragement } from "@/components/dashboard/daily-encouragement";
@@ -179,8 +180,8 @@ export function DashboardClient({
               <span className="inline-flex items-center px-3.5 py-0.5 rounded-full bg-black/5 dark:bg-white/10 text-[var(--ink)] font-semibold text-[0.8em] align-middle mx-1">
                 {myGroupInfo.name}
               </span>
-              {myGroupInfo.meeting_info ? ` (${myGroupInfo.meeting_info})` : ""}
-              , acompanha o cuidado pastoral da congregação com{" "}
+              {myGroupInfo.meeting_info ? ` (${myGroupInfo.meeting_info})` : ""}{" "}
+              e acompanha o cuidado pastoral da congregação com{" "}
             </>
           ) : (
             <>Você acompanha o cuidado pastoral da congregação com </>
@@ -427,7 +428,8 @@ export function DashboardClient({
             </Link>
 
             <div className="flex items-center gap-3">
-              <NavMenu />
+              <DesktopNavLinks />
+              <NavMenu fullName={profile.full_name} />
             </div>
           </div>
 

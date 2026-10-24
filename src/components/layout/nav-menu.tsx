@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { lightTap } from "@/lib/haptics";
 import { useUserPermissions } from "@/contexts/user-permissions-context";
 import { useOnlineSync } from "@/hooks/use-online-sync";
+import { createClient } from "@/lib/supabase/client";
 
 interface ButtonRect {
   width: number;
@@ -17,13 +18,13 @@ interface ButtonRect {
   right: number;
 }
 
-export function NavMenu() {
+interface NavMenuProps {
+  fullName?: string;
+}
+
+export function NavMenu({ fullName }: NavMenuProps = {}) {
   const {
-    canUseContacts,
     canUseHours,
-    canUseTalks,
-    canViewMembers,
-    canUseShepherding,
     isElderOrAdmin,
   } = useUserPermissions();
   const pathname = usePathname();
@@ -39,10 +40,39 @@ export function NavMenu() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [themeMode, setThemeMode] = useState<"light" | "dark" | "system">("system");
+  const [displayName, setDisplayName] = useState<string>(fullName || "");
+
+  useEffect(() => {
+    if (fullName) {
+      setDisplayName(fullName);
+      return;
+    }
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        const metaName = user.user_metadata?.full_name || user.user_metadata?.name;
+        if (metaName) {
+          setDisplayName(metaName);
+        } else {
+          supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("id", user.id)
+            .single()
+            .then(({ data }) => {
+              if (data?.full_name) setDisplayName(data.full_name);
+            });
+        }
+      }
+    });
+  }, [fullName]);
+
+  const activeName = displayName || fullName || "";
+  const initial = (activeName.trim()?.[0] || "K").toUpperCase();
 
   const [btnRect, setBtnRect] = useState<ButtonRect>({
-    width: 76,
-    height: 40,
+    width: 42,
+    height: 42,
     top: 20,
     right: 16,
   });
@@ -193,45 +223,20 @@ export function NavMenu() {
 
   const links = useMemo(() => {
     const list: Array<{ href: string; label: string }> = [
-      { href: "/", label: "Início" },
+      { href: "/perfil", label: "Meu Perfil" },
     ];
 
-    if (canUseContacts) {
-      list.push({ href: "/contatos", label: "Interessados" });
-    }
-
     if (canUseHours) {
-      list.push({ href: "/historico", label: "Histórico" });
-      list.push({ href: "/relatorio", label: "Relatório" });
+      list.push({ href: "/historico", label: "Histórico e Progresso" });
+      list.push({ href: "/relatorio", label: "Relatório Mensal" });
     }
-
-    if (canUseTalks) {
-      list.push({ href: "/discursos", label: "Discursos" });
-    }
-
-    if (canViewMembers) {
-      list.push({ href: "/irmaos", label: "Irmãos e Grupos" });
-    }
-
-    if (canUseShepherding) {
-      list.push({ href: "/pastoreio", label: "Pastoreio" });
-    }
-
-    list.push({ href: "/perfil", label: "Perfil" });
 
     if (isElderOrAdmin) {
-      list.push({ href: "/convidar", label: "Permissões" });
+      list.push({ href: "/convidar", label: "Permissões e Convites" });
     }
 
     return list;
-  }, [
-    canUseContacts,
-    canUseHours,
-    canUseTalks,
-    canViewMembers,
-    canUseShepherding,
-    isElderOrAdmin,
-  ]);
+  }, [canUseHours, isElderOrAdmin]);
 
   return (
     <>
@@ -241,17 +246,20 @@ export function NavMenu() {
         onClick={openMenu}
         aria-expanded={isOpen}
         aria-controls="nav-menu-panel"
-        aria-label="Abrir menu"
+        aria-label="Abrir menu de perfil e conta"
+        title={activeName ? `Perfil de ${activeName}` : "Menu de perfil"}
         className={cn(
-          "h-10 px-4 rounded-full font-sans font-semibold text-sm",
-          "bg-[var(--primary)] text-white shadow-sm",
-          "flex items-center justify-center shrink-0 min-h-[44px]",
-          "hover:opacity-95 active:scale-95 transition-transform duration-100",
+          "w-[42px] h-[42px] min-h-[42px] rounded-full",
+          "bg-[var(--surface)] border border-[var(--border)] shadow-xs",
+          "flex items-center justify-center shrink-0 cursor-pointer",
+          "hover:opacity-95 active:scale-95 transition-all duration-100",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]",
           isMounted ? "invisible pointer-events-none" : "visible"
         )}
       >
-        Menu
+        <span className="font-display text-lg font-medium text-[var(--primary)] select-none">
+          {initial}
+        </span>
       </button>
 
       {mounted && isMounted && createPortal(
@@ -291,16 +299,16 @@ export function NavMenu() {
               width: "min(calc(100vw - 28px), 360px)",
               maxWidth: "calc(100vw - 28px)",
               borderRadius: "28px",
-              backgroundColor: isExpanded && !isClosing ? "var(--surface)" : "var(--primary)",
+              backgroundColor: "var(--surface)",
               clipPath: isExpanded && !isClosing
                 ? "inset(0px 0px 0px 0px round 28px)"
                 : `inset(0px 0px calc(100% - ${btnRect.height}px) calc(100% - ${btnRect.width}px) round 999px)`,
               transition: prefersReducedMotion
                 ? "none"
                 : isExpanded && !isClosing
-                ? "clip-path 420ms cubic-bezier(.2,.8,.2,1), background-color 160ms cubic-bezier(.2,.8,.2,1)"
-                : "clip-path 280ms cubic-bezier(.2,.8,.2,1), background-color 200ms ease",
-              willChange: "clip-path, background-color",
+                ? "clip-path 420ms cubic-bezier(.2,.8,.2,1)"
+                : "clip-path 280ms cubic-bezier(.2,.8,.2,1)",
+              willChange: "clip-path",
             }}
           >
             {/* Top row: 3 circular buttons (32px) for theme + sync status on top-left, circular Close on top-right */}
@@ -391,6 +399,24 @@ export function NavMenu() {
                 <X size={18} strokeWidth={2.25} />
               </button>
             </div>
+
+            {/* Cabeçalho interno discreto: Nome do usuário */}
+            {activeName && (
+              <div
+                className="pt-1 pb-2 text-center border-b border-[var(--border)]/40 mb-1"
+                style={{
+                  opacity: isExpanded && !isClosing ? 1 : 0,
+                  transition: prefersReducedMotion ? "none" : "opacity 160ms ease-out 80ms",
+                }}
+              >
+                <p className="text-[11px] uppercase tracking-wider font-sans font-medium text-[var(--ink-muted)]">
+                  Conta
+                </p>
+                <p className="font-display font-medium text-base text-[var(--ink)] truncate mt-0.5">
+                  {activeName}
+                </p>
+              </div>
+            )}
 
             {/* Panel Body: Links in serif (font-display), centered horizontally, text-2xl */}
             <nav

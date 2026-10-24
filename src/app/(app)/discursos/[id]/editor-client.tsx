@@ -222,16 +222,21 @@ export function EditorClient({ id }: EditorClientProps) {
         {/* Top bar de navegação e status de salvamento */}
         <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
           <div className="flex items-center gap-2 min-w-0">
-            <Link
-              href="/discursos"
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== "undefined" && window.history.length > 1) {
+                  router.back();
+                } else {
+                  router.push("/discursos");
+                }
+              }}
               aria-label="Voltar para discursos"
-              className={cn(
-                buttonVariants({ variant: "ghost", size: "icon" }),
-                "h-9 w-9 shrink-0 text-[var(--ink-muted)] hover:text-[var(--ink)]"
-              )}
+              title="Voltar"
+              className="w-10 h-10 rounded-full bg-[var(--panel)] hover:bg-[var(--border)] flex items-center justify-center transition-colors text-[var(--ink)] shrink-0 active:scale-95 cursor-pointer shadow-xs"
             >
-              <ArrowLeft size={18} />
-            </Link>
+              <ArrowLeft size={20} />
+            </button>
             <span className="text-body-sm font-medium text-[var(--ink-muted)] truncate">
               {isNew ? "Novo esboço" : "Editar esboço"}
             </span>

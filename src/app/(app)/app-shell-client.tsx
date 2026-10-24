@@ -58,7 +58,7 @@ export function AppShellClient({
     <UserPermissionsProvider permissions={permissions}>
       <AppLockGate>
         <div
-          className="app-shell lg:!pb-12"
+          className="app-shell pb-20 lg:!pb-0"
           style={hasVisibleFloatingNav ? undefined : { paddingBottom: 0 }}
         >
           {/* Offline banner */}

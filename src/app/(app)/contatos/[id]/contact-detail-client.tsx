@@ -96,15 +96,21 @@ export function ContactDetailClient({ contactId }: { contactId: string }) {
     <div className="flex flex-col gap-5">
       {/* Back + actions */}
       <div className="flex items-center justify-between pt-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => router.back()}
-          className="gap-1.5 -ml-2 text-[var(--ink-muted)]"
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof window !== "undefined" && window.history.length > 1) {
+              router.back();
+            } else {
+              router.push("/contatos");
+            }
+          }}
+          aria-label="Voltar"
+          title="Voltar"
+          className="w-10 h-10 rounded-full bg-[var(--panel)] hover:bg-[var(--border)] flex items-center justify-center transition-colors text-[var(--ink)] shrink-0 active:scale-95 cursor-pointer shadow-xs"
         >
-          <ArrowLeft size={16} />
-          Voltar
-        </Button>
+          <ArrowLeft size={20} />
+        </button>
         <div className="flex gap-1">
           <Button variant="ghost" size="icon" onClick={() => setEditOpen(true)} aria-label="Editar">
             <Edit2 size={16} />

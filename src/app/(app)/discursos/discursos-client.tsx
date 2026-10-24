@@ -15,6 +15,8 @@ import { DeleteOutlineDialog } from "@/components/discursos/delete-outline-dialo
 import { toast } from "sonner";
 import { useDebounce } from "@/hooks/use-debounce";
 
+import { AppHeader } from "@/components/layout/app-header";
+
 interface OutlineItem {
   id: string;
   title: string;
@@ -119,40 +121,34 @@ export function DiscursosClient({ userId }: { userId: string }) {
 
   return (
     <div className="flex flex-col gap-5 pb-16">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3 pt-2">
-        <div>
-          <h1 className="font-display font-semibold text-2xl text-[var(--ink)]">
-            Discursos
-          </h1>
-          <p className="text-body-sm text-[var(--ink-muted)]">
-            Prepare, organize e consulte seus esboços
-          </p>
-        </div>
+      <AppHeader
+        title="Discursos"
+        subtitle="Prepare, organize e consulte seus esboços"
+        right={
+          <div className="flex items-center gap-2">
+            <Link
+              href="/discursos/biblia"
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "sm" }),
+                "h-9 px-3 text-xs rounded-full shrink-0 text-[var(--ink-muted)] hover:text-[var(--ink)]"
+              )}
+              title="Buscar palavras e temas na Bíblia"
+            >
+              <Search size={14} className="mr-1" /> Bíblia
+            </Link>
 
-        <div className="flex items-center gap-2">
-          <Link
-            href="/discursos/biblia"
-            className={cn(
-              buttonVariants({ variant: "ghost", size: "sm" }),
-              "h-9 px-3 text-xs rounded-full shrink-0 text-[var(--ink-muted)] hover:text-[var(--ink)]"
-            )}
-            title="Buscar palavras e temas na Bíblia"
-          >
-            <Search size={14} className="mr-1" /> Bíblia
-          </Link>
-
-          <Link
-            href="/discursos/novo"
-            className={cn(
-              buttonVariants({ variant: "primary", size: "sm" }),
-              "h-9 px-4 text-sm rounded-full shrink-0"
-            )}
-          >
-            <Plus size={16} className="-ml-1 mr-1" /> Novo
-          </Link>
-        </div>
-      </div>
+            <Link
+              href="/discursos/novo"
+              className={cn(
+                buttonVariants({ variant: "primary", size: "sm" }),
+                "h-9 px-4 text-sm rounded-full shrink-0"
+              )}
+            >
+              <Plus size={16} className="-ml-1 mr-1" /> Novo
+            </Link>
+          </div>
+        }
+      />
 
       {/* Busca */}
       <div className="relative">

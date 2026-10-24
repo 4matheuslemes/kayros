@@ -188,6 +188,12 @@ body {
   padding-bottom: var(--bottom-nav-h);
 }
 
+@media (min-width: 1024px) {
+  .app-shell {
+    padding-bottom: 0;
+  }
+}
+
 .page-content {
   flex: 1;
   padding: 0.75rem 0.75rem;
