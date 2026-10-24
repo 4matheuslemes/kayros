@@ -113,8 +113,8 @@ export function SwipeableContactRow({ contact, onEdit, onDelete }: SwipeableCont
         onTouchEnd={handleTouchEnd}
         onClick={handleClick}
         className={cn(
-          "relative flex flex-col w-full bg-[var(--surface)] border border-[var(--border)] rounded-lg shadow-sm transition-transform cursor-pointer",
-          "hover:bg-[var(--background)] duration-150"
+          "relative flex flex-col w-full bg-[var(--panel)] border-0 rounded-[24px] shadow-xs transition-transform cursor-pointer",
+          "hover:bg-black/[0.03] dark:hover:bg-white/5 duration-150"
         )}
         style={{
           transform: `translateX(${offset}px)`,

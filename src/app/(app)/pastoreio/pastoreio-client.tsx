@@ -8,8 +8,6 @@ import {
   Plus,
   Search,
   Calendar,
-  Users,
-  CalendarClock,
   ShieldAlert,
   ArrowLeft,
 } from "lucide-react";
@@ -45,6 +43,8 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
   const [formOpen, setFormOpen] = useState(false);
   const [editingVisit, setEditingVisit] = useState<ShepherdingVisit | null>(null);
   const [detailVisit, setDetailVisit] = useState<ShepherdingVisit | null>(null);
+
+  const today = format(new Date(), "yyyy-MM-dd");
 
   // Check PIN security on mount
   useEffect(() => {
@@ -342,7 +342,8 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
             </span>
           </div>
 
-          {filteredVisits.map((visit) => {
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {filteredVisits.map((visit) => {
             const visitedNames = getVisitedNames(visit);
             const displayTitle = formatVisitedSummary(visitedNames);
 
@@ -363,6 +364,10 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
               }
             })();
 
+            const isNextDue = Boolean(
+              visit.next_visit_date && visit.next_visit_date.slice(0, 10) <= today
+            );
+
             const companionDisplayName = visit.companion_member_id
               ? membersMap.get(visit.companion_member_id) || visit.companion
               : visit.companion;
@@ -372,7 +377,7 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
                 key={visit.id}
                 type="button"
                 onClick={() => setDetailVisit(visit)}
-                className="w-full text-left bg-[var(--surface)] border border-[var(--border)] rounded-lg p-4 hover:border-[var(--primary)]/50 active:bg-[var(--background)] transition-all shadow-xs flex items-center justify-between gap-3 group cursor-pointer"
+                className="w-full text-left bg-[var(--panel)] border-0 rounded-[24px] p-5 hover:bg-black/[0.03] dark:hover:bg-white/5 active:scale-[0.99] transition-all shadow-xs flex items-center justify-between gap-3 group cursor-pointer"
               >
                 <div className="flex flex-col gap-1.5 min-w-0 flex-1">
                   <div className="flex items-baseline justify-between gap-2">
@@ -381,29 +386,26 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
                     </h3>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-1.5 text-caption text-[var(--ink-muted)]">
+                  {/* Linha 2: Data da visita e autor */}
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-[var(--ink-muted)]">
                     <Calendar size={13} className="shrink-0 text-[var(--ink-muted)]" />
                     <span>{formattedDate}</span>
                     <span>•</span>
                     <span className="truncate">Realizada por: {visit.created_by_name || "Ancião"}</span>
                   </div>
 
-                  {/* Indicators for Companion and Next Visit */}
+                  {/* Linha 3: Acompanhante e Próxima visita em texto simples e discreto */}
                   {(companionDisplayName || formattedNext) && (
-                    <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs text-[var(--ink-muted)]">
                       {companionDisplayName && (
-                        <span className="inline-flex items-center gap-1 text-2xs text-[var(--ink-muted)] bg-[var(--background)] px-2 py-0.5 rounded-full border border-[var(--border)]">
-                          <Users size={11} className="shrink-0" />
-                          <span className="truncate max-w-[140px]">
-                            Acompanhante: {companionDisplayName}
-                          </span>
-                        </span>
+                        <span>Acompanhante: {companionDisplayName}</span>
                       )}
-
+                      {companionDisplayName && formattedNext && (
+                        <span>•</span>
+                      )}
                       {formattedNext && (
-                        <span className="inline-flex items-center gap-1 text-2xs text-[var(--primary)] bg-[var(--primary)]/10 px-2 py-0.5 rounded-full border border-[var(--primary)]/20 font-medium">
-                          <CalendarClock size={11} className="shrink-0" />
-                          <span>Próxima: {formattedNext}</span>
+                        <span className={isNextDue ? "text-[var(--accent)] font-medium" : undefined}>
+                          Próxima: {formattedNext}
                         </span>
                       )}
                     </div>
@@ -412,6 +414,7 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
               </button>
             );
           })}
+          </div>
         </div>
       )}
 

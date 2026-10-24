@@ -234,7 +234,7 @@ export function ContatosClient({ userId }: ContatosClientProps) {
           description="Tente ajustar o filtro ou a busca"
         />
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {filtered.map((contact) => (
             <SwipeableContactRow
               key={contact.id}

@@ -836,7 +836,8 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
                 </span>
               </div>
 
-              {filteredAndSortedMembers.map((m) => {
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {filteredAndSortedMembers.map((m) => {
                 const isSelf = isCurrentUserMember(m, { memberId, userId });
                 const designations = formatDesignations(m);
                 const lastVisitText = formatLastVisit(m.last_visit_date);
@@ -940,6 +941,7 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
                   </button>
                 );
               })}
+              </div>
             </div>
           )}
         </TabsContent>
@@ -972,7 +974,7 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
               />
             </Card>
           ) : (
-            <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
               {/* Grupos de serviço ordenados por sort_order */}
               {groups.map((group) => {
                 const groupMembers = groupMembersMap.get(group.id) || [];
@@ -989,7 +991,7 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
                 ).length;
 
                 return (
-                  <Card key={group.id} className="p-4 flex flex-col gap-3 shadow-xs border-[var(--border)]">
+                  <Card key={group.id} className="p-5 sm:p-6 flex flex-col gap-3.5 rounded-[28px] bg-[var(--panel)] border-0 shadow-xs">
                     {/* Cabeçalho do Grupo */}
                     <div className="flex flex-col gap-1.5 pb-2.5 border-b border-[var(--border)]/70">
                       <div className="flex items-start justify-between gap-2">
@@ -1080,7 +1082,7 @@ export function IrmaosClient({ userId }: IrmaosClientProps) {
                                 </span>
                                 <div className="flex flex-col min-w-0">
                                   <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className="text-body-sm font-medium text-[var(--ink)] hover:text-[var(--primary)] transition-colors truncate">
+                                    <span className="text-body-sm font-medium text-[var(--ink)] hover:text-[var(--primary)] transition-colors">
                                       {m.full_name}
                                     </span>
                                     {isSelf && (

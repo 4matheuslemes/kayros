@@ -74,7 +74,7 @@ export function WeeklyStudiesList({ contacts }: WeeklyStudiesListProps) {
           <h3 className="text-caption uppercase text-[var(--ink-muted)] tracking-wider px-2">
             {group.label}
           </h3>
-          <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {group.studies.map(contact => {
               // Calculate if studied this week
               // If study_frequency is 2, they might need 2 visits, but let's just mark it if ANY visit happened this week

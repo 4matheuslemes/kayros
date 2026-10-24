@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Home, Clock, UserCheck, Shield, ChevronRight } from "lucide-react";
+import { Home, Clock, ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
 export interface MyGroupInfo {
@@ -28,8 +28,8 @@ export function MyServiceGroupCard({ group }: MyServiceGroupCardProps) {
             <Home size={17} />
           </div>
           <div className="flex flex-col min-w-0">
-            <span className="text-caption font-semibold uppercase tracking-wider text-[var(--ink-muted)]">
-              Meu Grupo de Serviço
+            <span className="text-xs text-[var(--ink-muted)]">
+              Meu grupo de serviço
             </span>
             <h3 className="font-display font-semibold text-base text-[var(--ink)] truncate group-hover:text-[var(--primary)] transition-colors">
               {group.sort_order}. {group.name}
@@ -50,21 +50,22 @@ export function MyServiceGroupCard({ group }: MyServiceGroupCardProps) {
       )}
 
       {(group.overseer_name || group.assistant_name) && (
-        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-[var(--border)]/60 text-2xs text-[var(--ink-muted)]">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 pt-2 border-t border-[var(--border)] text-xs text-[var(--ink-muted)]">
           {group.overseer_name && (
-            <span className="inline-flex items-center gap-1 bg-[var(--background)] px-2 py-0.5 rounded-full border border-[var(--border)]">
-              <Shield size={11} className="text-[var(--primary)] shrink-0" />
-              <span className="truncate max-w-[150px]">
-                Superintendente: <strong className="font-medium text-[var(--ink)]">{group.overseer_name}</strong>
-              </span>
+            <span>
+              Superintendente:{" "}
+              <strong className="font-medium text-[var(--ink)]">
+                {group.overseer_name}
+              </strong>
             </span>
           )}
+          {group.overseer_name && group.assistant_name && <span>•</span>}
           {group.assistant_name && (
-            <span className="inline-flex items-center gap-1 bg-[var(--background)] px-2 py-0.5 rounded-full border border-[var(--border)]">
-              <UserCheck size={11} className="text-[var(--accent)] shrink-0" />
-              <span className="truncate max-w-[150px]">
-                Ajudante: <strong className="font-medium text-[var(--ink)]">{group.assistant_name}</strong>
-              </span>
+            <span>
+              Ajudante:{" "}
+              <strong className="font-medium text-[var(--ink)]">
+                {group.assistant_name}
+              </strong>
             </span>
           )}
         </div>

@@ -70,6 +70,7 @@ export default async function DashboardPage() {
 
   let pastoralData: {
     dueCount: number;
+    dueMembers?: Array<{ id: string; name: string }>;
     latestVisit: {
       family_or_person: string;
       visit_date: string;
@@ -89,7 +90,7 @@ export default async function DashboardPage() {
         .maybeSingle(),
       supabase
         .from("congregation_members")
-        .select("id, is_self")
+        .select("id, full_name, is_self")
         .eq("active", true),
       supabase
         .from("shepherding_visit_members")
@@ -107,6 +108,7 @@ export default async function DashboardPage() {
     }
 
     let dueCount = 0;
+    const dueMembers: Array<{ id: string; name: string }> = [];
     for (const m of activeMembersRes.data || []) {
       const isSelf = permissions.memberId
         ? m.id === permissions.memberId
@@ -116,11 +118,15 @@ export default async function DashboardPage() {
       const nextDate = latestNextMap.get(m.id);
       if (nextDate && nextDate <= today) {
         dueCount++;
+        if (dueMembers.length < 5) {
+          dueMembers.push({ id: m.id, name: m.full_name });
+        }
       }
     }
 
     pastoralData = {
       dueCount,
+      dueMembers,
       latestVisit: latestVisitRes.data
         ? {
             family_or_person: latestVisitRes.data.family_or_person,
@@ -129,6 +135,27 @@ export default async function DashboardPage() {
           }
         : null,
     };
+  }
+
+  let latestOutline: {
+    id: string;
+    title: string;
+    category: string | null;
+    updated_at: string;
+    word_count: number;
+  } | null = null;
+
+  if (permissions.canUseTalks) {
+    const { data: outlineRow } = await supabase
+      .from("outlines")
+      .select("id, title, category, updated_at, word_count")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (outlineRow) {
+      latestOutline = outlineRow;
+    }
   }
 
   return (
@@ -146,6 +173,7 @@ export default async function DashboardPage() {
       permissions={permissions}
       myGroupInfo={myGroupInfo}
       pastoralData={pastoralData}
+      latestOutline={latestOutline}
     />
   );
 }

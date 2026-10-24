@@ -199,80 +199,82 @@ export function DiscursosClient({ userId }: { userId: string }) {
             )}
           </div>
         ) : (
-          outlines.map((outline) => {
-            const minutes = minutesFromWords(outline.word_count || 0);
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {outlines.map((outline) => {
+              const minutes = minutesFromWords(outline.word_count || 0);
 
-            return (
-              <Link key={outline.id} href={`/discursos/${outline.id}`} className="block">
-                <Card
-                  interactive
-                  padding="sm"
-                  className="flex items-center gap-3.5 hover:border-[var(--primary)]/40 group transition-all"
-                >
-                  <div className="w-11 h-11 rounded-xl bg-[var(--background)] flex items-center justify-center text-[var(--primary)] shrink-0 border border-[var(--border)]">
-                    <BookOpenText size={20} />
-                  </div>
-
-                  <div className="flex-1 min-w-0 py-0.5">
-                    <h3 className="font-display font-medium text-[var(--ink)] truncate text-base mb-1">
-                      {outline.title || "Sem título"}
-                    </h3>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {outline.category && (
-                        <Badge variant="accent">{outline.category}</Badge>
-                      )}
-                      <span className="text-caption text-[var(--ink-muted)]">
-                        {formatRelativeDate(outline.updated_at)}
-                      </span>
-                      {outline.word_count > 0 && (
-                        <span className="text-caption text-[var(--ink-muted)] tabular-nums">
-                          · {formatDuration(minutes)}
-                        </span>
-                      )}
+              return (
+                <Link key={outline.id} href={`/discursos/${outline.id}`} className="block">
+                  <Card
+                    interactive
+                    padding="sm"
+                    className="flex items-center gap-3.5 hover:border-[var(--primary)]/40 group transition-all"
+                  >
+                    <div className="w-11 h-11 rounded-xl bg-[var(--background)] flex items-center justify-center text-[var(--primary)] shrink-0 border border-[var(--border)]">
+                      <BookOpenText size={20} />
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-1 opacity-80 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        router.push(`/discursos/${outline.id}/apresentar`);
-                      }}
-                      title="Apresentar no Modo Discurso"
-                      aria-label="Apresentar esboço"
-                      className="p-2 rounded-lg text-[var(--primary)] hover:bg-[var(--primary)]/10 transition-colors cursor-pointer"
-                    >
-                      <Play size={15} fill="currentColor" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => handleDuplicate(outline, e)}
-                      title="Duplicar esboço"
-                      aria-label="Duplicar esboço"
-                      className="p-2 rounded-lg text-[var(--ink-muted)] hover:text-[var(--ink)] hover:bg-[var(--background)] transition-colors cursor-pointer"
-                    >
-                      <Copy size={16} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setOutlineToDelete(outline);
-                      }}
-                      title="Excluir esboço"
-                      aria-label="Excluir esboço"
-                      className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </Card>
-              </Link>
-            );
-          })
+                    <div className="flex-1 min-w-0 py-0.5">
+                      <h3 className="font-display font-medium text-[var(--ink)] truncate text-base mb-1">
+                        {outline.title || "Sem título"}
+                      </h3>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {outline.category && (
+                          <Badge variant="accent">{outline.category}</Badge>
+                        )}
+                        <span className="text-caption text-[var(--ink-muted)]">
+                          {formatRelativeDate(outline.updated_at)}
+                        </span>
+                        {outline.word_count > 0 && (
+                          <span className="text-caption text-[var(--ink-muted)] tabular-nums">
+                            · {formatDuration(minutes)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 opacity-80 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          router.push(`/discursos/${outline.id}/apresentar`);
+                        }}
+                        title="Apresentar no Modo Discurso"
+                        aria-label="Apresentar esboço"
+                        className="p-2 rounded-lg text-[var(--primary)] hover:bg-[var(--primary)]/10 transition-colors cursor-pointer"
+                      >
+                        <Play size={15} fill="currentColor" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => handleDuplicate(outline, e)}
+                        title="Duplicar esboço"
+                        aria-label="Duplicar esboço"
+                        className="p-2 rounded-lg text-[var(--ink-muted)] hover:text-[var(--ink)] hover:bg-[var(--background)] transition-colors cursor-pointer"
+                      >
+                        <Copy size={15} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setOutlineToDelete(outline);
+                        }}
+                        title="Excluir esboço"
+                        aria-label="Excluir esboço"
+                        className="p-2 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </Card>
+                </Link>
+              );
+            })}
+          </div>
         )}
       </div>
 

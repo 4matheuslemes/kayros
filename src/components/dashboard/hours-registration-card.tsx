@@ -10,13 +10,19 @@ import { Card } from "@/components/ui/card";
 import { useTimer } from "@/hooks/use-timer";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 interface HoursRegistrationCardProps {
   userId: string;
   onRecordSaved: () => void;
+  className?: string;
 }
 
-export function HoursRegistrationCard({ userId, onRecordSaved }: HoursRegistrationCardProps) {
+export function HoursRegistrationCard({
+  userId,
+  onRecordSaved,
+  className,
+}: HoursRegistrationCardProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -46,7 +52,12 @@ export function HoursRegistrationCard({ userId, onRecordSaved }: HoursRegistrati
 
   return (
     <>
-      <Card className="overflow-hidden relative shadow-sm border-[var(--border)]">
+      <Card
+        className={cn(
+          "overflow-hidden relative rounded-[28px] border-[var(--border)] shadow-[var(--shadow-card)] bg-[var(--surface)]",
+          className
+        )}
+      >
         <div className="p-5 flex flex-col gap-2">
           {/* Top row: Date + Mode Toggle */}
           <div className="flex items-center justify-between pb-2">

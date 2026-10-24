@@ -3,8 +3,13 @@
 import { useEffect, useState } from "react";
 import { getDayOfYear } from "date-fns";
 import { DAILY_ENCOURAGEMENT_MESSAGES } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
-export function DailyEncouragement() {
+interface DailyEncouragementProps {
+  className?: string;
+}
+
+export function DailyEncouragement({ className }: DailyEncouragementProps = {}) {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -29,10 +34,13 @@ export function DailyEncouragement() {
   }
 
   return (
-    <div className="flex flex-col gap-0.5 -mt-4 mb-2">
-      <p className="text-caption text-[var(--ink-muted)]">
-        {message}
-      </p>
-    </div>
+    <p
+      className={cn(
+        "text-base lg:text-lg text-[var(--ink-muted)] leading-relaxed font-sans",
+        className
+      )}
+    >
+      {message}
+    </p>
   );
 }

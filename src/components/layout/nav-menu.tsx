@@ -4,11 +4,11 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { X } from "lucide-react";
+import { X, Sun, Moon, Laptop, CloudCheck, CloudAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { lightTap } from "@/lib/haptics";
 import { useUserPermissions } from "@/contexts/user-permissions-context";
-import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { useOnlineSync } from "@/hooks/use-online-sync";
 
 interface ButtonRect {
   width: number;
@@ -27,6 +27,7 @@ export function NavMenu() {
     isElderOrAdmin,
   } = useUserPermissions();
   const pathname = usePathname();
+  const isOnline = useOnlineSync();
 
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -37,6 +38,8 @@ export function NavMenu() {
   const [isMounted, setIsMounted] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [themeMode, setThemeMode] = useState<"light" | "dark" | "system">("system");
+
   const [btnRect, setBtnRect] = useState<ButtonRect>({
     width: 76,
     height: 40,
@@ -51,7 +54,26 @@ export function NavMenu() {
 
   useEffect(() => {
     setMounted(true);
+    const stored = localStorage.getItem("kairos-theme");
+    if (stored === "light" || stored === "dark") {
+      setThemeMode(stored);
+    } else {
+      setThemeMode("system");
+    }
   }, []);
+
+  const handleSetTheme = (mode: "light" | "dark" | "system") => {
+    lightTap();
+    setThemeMode(mode);
+    if (mode === "system") {
+      localStorage.removeItem("kairos-theme");
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.setAttribute("data-theme", prefersDark ? "dark" : "light");
+    } else {
+      localStorage.setItem("kairos-theme", mode);
+      document.documentElement.setAttribute("data-theme", mode);
+    }
+  };
 
   const openMenu = () => {
     if (!buttonRef.current) return;
@@ -74,7 +96,6 @@ export function NavMenu() {
       return;
     }
 
-    // Trigger expansion in next frame
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         setIsExpanded(true);
@@ -180,7 +201,7 @@ export function NavMenu() {
     }
 
     if (canUseHours) {
-      list.push({ href: "/historico", label: "Histórico e Progresso" });
+      list.push({ href: "/historico", label: "Histórico" });
       list.push({ href: "/relatorio", label: "Relatório" });
     }
 
@@ -193,13 +214,13 @@ export function NavMenu() {
     }
 
     if (canUseShepherding) {
-      list.push({ href: "/pastoreio", label: "Registro de Pastoreio" });
+      list.push({ href: "/pastoreio", label: "Pastoreio" });
     }
 
     list.push({ href: "/perfil", label: "Perfil" });
 
     if (isElderOrAdmin) {
-      list.push({ href: "/convidar", label: "Permissões e Convites" });
+      list.push({ href: "/convidar", label: "Permissões" });
     }
 
     return list;
@@ -251,7 +272,7 @@ export function NavMenu() {
             aria-hidden="true"
           />
 
-          {/* Morphing Panel */}
+          {/* Morphing Panel (Estilo America.gov) */}
           <div
             ref={panelRef}
             id="nav-menu-panel"
@@ -262,12 +283,12 @@ export function NavMenu() {
               "fixed z-50 overflow-hidden",
               "border border-[var(--border)]",
               "shadow-[0_20px_50px_rgba(0,0,0,0.18)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)]",
-              "p-3 flex flex-col"
+              "p-4 sm:p-5 flex flex-col"
             )}
             style={{
               top: `${btnRect.top}px`,
               right: `${btnRect.right}px`,
-              width: "min(calc(100vw - 28px), 340px)",
+              width: "min(calc(100vw - 28px), 360px)",
               maxWidth: "calc(100vw - 28px)",
               borderRadius: "28px",
               backgroundColor: isExpanded && !isClosing ? "var(--surface)" : "var(--primary)",
@@ -282,35 +303,100 @@ export function NavMenu() {
               willChange: "clip-path, background-color",
             }}
           >
-            {/* Header row with Close button in the exact same spot */}
+            {/* Top row: 3 circular buttons (32px) for theme + sync status on top-left, circular Close on top-right */}
             <div
-              className="flex items-center justify-end px-1"
-              style={{ height: `${btnRect.height}px` }}
+              className="flex items-center justify-between pb-3"
+              style={{
+                opacity: isExpanded && !isClosing ? 1 : 0,
+                transition: prefersReducedMotion ? "none" : "opacity 160ms ease-out 60ms",
+              }}
             >
+              {/* Top-left: Theme toggles + Sync status */}
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleSetTheme("light")}
+                  aria-label="Tema claro"
+                  title="Tema claro"
+                  className={cn(
+                    "w-8 h-8 rounded-full flex items-center justify-center transition-all",
+                    themeMode === "light"
+                      ? "bg-[var(--primary)] text-white shadow-xs"
+                      : "bg-black/5 dark:bg-white/10 text-[var(--ink-muted)] hover:text-[var(--ink)]"
+                  )}
+                >
+                  <Sun size={15} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleSetTheme("dark")}
+                  aria-label="Tema escuro"
+                  title="Tema escuro"
+                  className={cn(
+                    "w-8 h-8 rounded-full flex items-center justify-center transition-all",
+                    themeMode === "dark"
+                      ? "bg-[var(--primary)] text-white shadow-xs"
+                      : "bg-black/5 dark:bg-white/10 text-[var(--ink-muted)] hover:text-[var(--ink)]"
+                  )}
+                >
+                  <Moon size={15} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleSetTheme("system")}
+                  aria-label="Tema do sistema"
+                  title="Tema do sistema"
+                  className={cn(
+                    "w-8 h-8 rounded-full flex items-center justify-center transition-all",
+                    themeMode === "system"
+                      ? "bg-[var(--primary)] text-white shadow-xs"
+                      : "bg-black/5 dark:bg-white/10 text-[var(--ink-muted)] hover:text-[var(--ink)]"
+                  )}
+                >
+                  <Laptop size={15} />
+                </button>
+
+                {/* Sync status circle (32px) */}
+                <div
+                  className={cn(
+                    "w-8 h-8 rounded-full flex items-center justify-center transition-colors ml-0.5",
+                    isOnline
+                      ? "text-[var(--success)] bg-[var(--success)]/10"
+                      : "text-[var(--alert)] bg-[var(--alert)]/10"
+                  )}
+                  title={isOnline ? "Sincronizado e online" : "Offline (sincronizará ao reconectar)"}
+                  aria-label={isOnline ? "Sincronizado" : "Offline"}
+                >
+                  {isOnline ? <CloudCheck size={16} /> : <CloudAlert size={16} />}
+                </div>
+              </div>
+
+              {/* Top-right: Circular Close button */}
               <button
                 ref={closeButtonRef}
                 type="button"
                 onClick={closeMenu}
                 aria-label="Fechar menu"
                 className={cn(
-                  "w-10 h-10 min-w-[44px] min-h-[44px] rounded-full",
+                  "w-8 h-8 rounded-full",
                   "flex items-center justify-center",
                   "text-[var(--ink)] hover:text-[var(--primary)]",
                   "bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/15",
                   "transition-colors active:scale-95",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
                 )}
-                style={{
-                  opacity: isExpanded && !isClosing ? 1 : 0,
-                  transition: prefersReducedMotion ? "none" : "opacity 160ms ease-out 80ms",
-                }}
               >
-                <X size={20} strokeWidth={2.25} />
+                <X size={18} strokeWidth={2.25} />
               </button>
             </div>
 
-            {/* Links list */}
-            <nav className="flex flex-col gap-0.5 px-2 pt-1 pb-1" aria-label="Destinos do menu">
+            {/* Panel Body: Links in serif (font-display), centered horizontally, text-2xl */}
+            <nav
+              className="flex flex-col items-center justify-center py-4 space-y-1.5"
+              aria-label="Destinos do menu"
+            >
               {links.map((item, index) => {
                 const isActive =
                   item.href === "/"
@@ -328,82 +414,36 @@ export function NavMenu() {
                     }}
                     aria-current={isActive ? "page" : undefined}
                     className={cn(
-                      "group flex items-center justify-between px-3 py-2 rounded-2xl min-h-[44px]",
-                      "transition-colors duration-150",
+                      "w-full text-center py-2 px-3 rounded-2xl min-h-[44px] flex items-center justify-center",
+                      "transition-all duration-150",
                       "hover:bg-black/[0.04] dark:hover:bg-white/5",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]",
                       isActive
-                        ? "text-[var(--ink)] font-semibold"
-                        : "text-[var(--ink-muted)] hover:text-[var(--ink)] font-normal"
+                        ? "text-[var(--primary)] font-semibold"
+                        : "text-[var(--ink)] hover:text-[var(--primary)] font-normal"
                     )}
                     style={{
                       opacity: isExpanded && !isClosing ? 1 : 0,
-                      transform: isExpanded && !isClosing ? "translateY(0)" : "translateY(6px)",
+                      transform: isExpanded && !isClosing ? "translateY(0)" : "translateY(8px)",
                       transition: prefersReducedMotion
                         ? "none"
                         : isExpanded && !isClosing
-                        ? "opacity 220ms ease-out, transform 220ms cubic-bezier(.2,.8,.2,1)"
+                        ? "opacity 240ms ease-out, transform 240ms cubic-bezier(.2,.8,.2,1)"
                         : "opacity 140ms ease, transform 140ms ease",
                       transitionDelay: prefersReducedMotion
                         ? "0ms"
                         : isExpanded && !isClosing
-                        ? `${140 + index * 40}ms`
+                        ? `${100 + index * 35}ms`
                         : "0ms",
                     }}
                   >
-                    <span className="font-display text-2xl tracking-tight leading-tight">
+                    <span className="font-display text-[25px] tracking-tight leading-tight">
                       {item.label}
                     </span>
-                    {isActive && (
-                      <span
-                        className="w-2 h-2 rounded-full bg-[var(--accent)] shrink-0"
-                        aria-hidden="true"
-                      />
-                    )}
                   </Link>
                 );
               })}
             </nav>
-
-            {/* Divider */}
-            <div
-              className="my-2 mx-3 border-t border-[var(--border)]"
-              style={{
-                opacity: isExpanded && !isClosing ? 1 : 0,
-                transform: isExpanded && !isClosing ? "translateY(0)" : "translateY(6px)",
-                transition: prefersReducedMotion
-                  ? "none"
-                  : isExpanded && !isClosing
-                  ? "opacity 220ms ease-out, transform 220ms cubic-bezier(.2,.8,.2,1)"
-                  : "opacity 140ms ease, transform 140ms ease",
-                transitionDelay: prefersReducedMotion
-                  ? "0ms"
-                  : isExpanded && !isClosing
-                  ? `${140 + links.length * 40}ms`
-                  : "0ms",
-              }}
-            />
-
-            {/* In-Panel Theme Toggle */}
-            <div
-              className="px-2 pb-1"
-              style={{
-                opacity: isExpanded && !isClosing ? 1 : 0,
-                transform: isExpanded && !isClosing ? "translateY(0)" : "translateY(6px)",
-                transition: prefersReducedMotion
-                  ? "none"
-                  : isExpanded && !isClosing
-                  ? "opacity 220ms ease-out, transform 220ms cubic-bezier(.2,.8,.2,1)"
-                  : "opacity 140ms ease, transform 140ms ease",
-                transitionDelay: prefersReducedMotion
-                  ? "0ms"
-                  : isExpanded && !isClosing
-                  ? `${140 + (links.length + 1) * 40}ms`
-                  : "0ms",
-              }}
-            >
-              <ThemeToggle variant="menu" onToggle={() => lightTap()} />
-            </div>
           </div>
         </>,
         document.body

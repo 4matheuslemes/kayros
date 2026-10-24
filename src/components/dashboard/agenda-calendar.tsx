@@ -3,17 +3,18 @@
 import { useMemo } from "react";
 import { format, isSameDay, parseISO, addDays, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarDays, BookOpen, User } from "lucide-react";
 import { useAllVisits, useContacts } from "@/lib/db/hooks";
 import { ISO_DAY_TO_STRING } from "@/lib/goals/calculate-monthly-goal";
 import type { Profile } from "@/lib/db/dexie";
 import { formatHours } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import Link from "next/link";
 
 interface AgendaCalendarProps {
   userId: string;
   profile: Profile;
+  className?: string;
 }
 
 type AgendaEvent = {
@@ -24,7 +25,7 @@ type AgendaEvent = {
   type: "visit" | "study";
 };
 
-export function AgendaCalendar({ userId, profile }: AgendaCalendarProps) {
+export function AgendaCalendar({ userId, profile, className }: AgendaCalendarProps) {
   const { visits } = useAllVisits(userId);
   const { contacts } = useContacts(userId);
   const weeklySchedule = profile.weekly_schedule || {};
@@ -160,13 +161,20 @@ export function AgendaCalendar({ userId, profile }: AgendaCalendarProps) {
   };
 
   return (
-    <Card className="overflow-hidden shadow-sm border-[var(--border)] bg-[var(--surface)] dark:bg-[var(--surface-dark)]">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <CalendarDays size={18} className="text-[var(--primary)]" />
-          Agenda da Semana
-        </CardTitle>
-      </CardHeader>
+    <div
+      className={cn(
+        "rounded-[36px] lg:rounded-[40px] bg-[var(--panel)] p-6 sm:p-8 shadow-xs border-0 overflow-hidden flex flex-col justify-between",
+        className
+      )}
+    >
+      <div className="flex items-center gap-2 mb-6">
+        <div className="w-8 h-8 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] flex items-center justify-center shrink-0">
+          <CalendarDays size={16} />
+        </div>
+        <h3 className="font-display font-medium text-lg sm:text-xl text-[var(--ink)]">
+          Agenda da semana
+        </h3>
+      </div>
       <div className="grid grid-cols-2 gap-4 h-full">
         
         {/* Left Side: Today */}
@@ -262,6 +270,6 @@ export function AgendaCalendar({ userId, profile }: AgendaCalendarProps) {
         </div>
 
       </div>
-    </Card>
+    </div>
   );
 }

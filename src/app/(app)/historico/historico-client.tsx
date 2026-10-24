@@ -84,7 +84,7 @@ export function HistoricoClient({ userId, profile }: { userId: string, profile: 
           <TabsTrigger value="ano" className="flex-1">Ano</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="registros" className="mt-0">
+        <TabsContent value="registros" className="mt-0 max-w-3xl mx-auto w-full">
           {records.length === 0 ? (
             <div className="p-8 text-center text-[var(--ink-muted)] border border-dashed rounded-lg mt-4">
               Nenhum registro encontrado.
@@ -111,7 +111,7 @@ export function HistoricoClient({ userId, profile }: { userId: string, profile: 
           )}
         </TabsContent>
 
-        <TabsContent value="mes" className="mt-0">
+        <TabsContent value="mes" className="mt-0 max-w-3xl mx-auto w-full">
           <div className="flex gap-3 mb-4">
             <Field label="Mês" htmlFor="history-month" className="flex-1">
               <Select
@@ -139,7 +139,7 @@ export function HistoricoClient({ userId, profile }: { userId: string, profile: 
           )}
         </TabsContent>
 
-        <TabsContent value="ano" className="mt-0">
+        <TabsContent value="ano" className="mt-0 max-w-3xl mx-auto w-full">
           <ServiceYearSummary records={records} goalHours={profile.monthly_goal_hours} />
         </TabsContent>
       </Tabs>
