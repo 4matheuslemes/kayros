@@ -4,9 +4,6 @@ import { type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SyncStatusIndicator } from "./sync-status-indicator";
-import { DesktopNavLinks } from "./desktop-nav-links";
-import { NavMenu } from "./nav-menu";
 
 interface AppHeaderProps {
   title: string;
@@ -15,6 +12,7 @@ interface AppHeaderProps {
   className?: string;
   hideMenu?: boolean;
   hideBack?: boolean;
+  backHref?: string;
 }
 
 export function AppHeader({
@@ -23,11 +21,14 @@ export function AppHeader({
   right,
   className,
   hideBack = false,
+  backHref,
 }: AppHeaderProps) {
   const router = useRouter();
 
   const handleBack = () => {
-    if (typeof window !== "undefined" && window.history.length > 1) {
+    if (backHref) {
+      router.push(backHref);
+    } else if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
     } else {
       router.push("/");
@@ -37,45 +38,42 @@ export function AppHeader({
   return (
     <header
       className={cn(
-        "flex flex-col sm:flex-row sm:items-end justify-between gap-4",
-        "px-0 pt-4 pb-6 sm:pb-8 border-b border-[var(--border)]/40 mb-6 sm:mb-8",
+        "flex items-center justify-between gap-4",
+        "px-0 pt-2 pb-5 sm:pb-6 border-b border-[var(--border)]/40 mb-6",
         className
       )}
     >
-      <div className="flex items-center gap-3.5 min-w-0">
+      {/* ── LADO ESQUERDO: VOLTAR + TÍTULO/SUBTÍTULO EDITORIAL ── */}
+      <div className="flex items-center gap-3 min-w-0">
         {!hideBack && (
           <button
             type="button"
             onClick={handleBack}
             aria-label="Voltar"
             title="Voltar"
-            className="w-10 h-10 rounded-full bg-[var(--panel)] hover:bg-[var(--border)] flex items-center justify-center transition-colors text-[var(--ink)] shrink-0 active:scale-95 cursor-pointer shadow-xs"
+            className="w-9 h-9 rounded-full bg-[var(--panel)] hover:bg-[var(--border)] flex items-center justify-center transition-colors text-[var(--ink)] shrink-0 active:scale-95 cursor-pointer shadow-xs"
           >
-            <ArrowLeft size={20} />
+            <ArrowLeft size={18} />
           </button>
         )}
         <div className="min-w-0">
-          <h1
-            className="font-display font-medium text-[var(--ink)] leading-none tracking-[-0.03em]"
-            style={{ fontSize: "clamp(2rem, 4.5vw, 3.25rem)" }}
-          >
+          <h1 className="font-display text-2xl sm:text-[26px] lg:text-[30px] font-normal tracking-[-0.025em] leading-[1.15] text-[var(--ink)] truncate">
             {title}
           </h1>
           {subtitle && (
-            <p className="text-sm sm:text-base text-[var(--ink-muted)] mt-2">
+            <p className="text-xs sm:text-sm text-[var(--ink-muted)] mt-0.5 truncate">
               {subtitle}
             </p>
           )}
         </div>
       </div>
-      <div className="flex items-center gap-3 shrink-0">
-        <DesktopNavLinks />
-        <SyncStatusIndicator />
-        {right}
-        <div className="hidden lg:block">
-          <NavMenu />
+
+      {/* ── LADO DIREITO: EXCLUSIVAMENTE AÇÕES ESPECÍFICAS DA PÁGINA ── */}
+      {right && (
+        <div className="flex items-center gap-2.5 shrink-0">
+          {right}
         </div>
-      </div>
+      )}
     </header>
   );
 }

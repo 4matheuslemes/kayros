@@ -49,6 +49,7 @@
   --radius-xl:      28px;
   --radius-2xl:     36px;
   --bottom-nav-h:   96px;
+  --liquid-glass-bg: rgba(255, 255, 255, 0.72);
 
   /* Versículos (Módulo Discursos) */
   --verse-accent:    #8B4A52;
@@ -71,6 +72,7 @@
   --panel:          #151D2B;
   --section-gray:   #0F1623;
   --border:         #232F42;
+  --liquid-glass-bg: rgba(17, 24, 39, 0.74);
 
   /* Hero Gradient Dark */
   --hero-from:      #111A29;
@@ -210,10 +212,11 @@ body {
 
 @media (min-width: 1024px) {
   .page-content {
-    padding: 2rem 2rem;
-    max-width: 1280px;
+    padding: 1.5rem 2.5rem;
+    max-width: 1160px;
   }
 }
+
 
 /* ─────────────────────────────────────────────────────────────
    Reveal Animation (Estilo America.gov)

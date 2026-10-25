@@ -25,6 +25,7 @@ import { PastoreioLockGate } from "@/components/pastoreio/pastoreio-lock-gate";
 import { PastoreioFormSheet } from "@/components/pastoreio/pastoreio-form-sheet";
 import { PastoreioDetailSheet } from "@/components/pastoreio/pastoreio-detail-sheet";
 
+
 interface PastoreioClientProps {
   userId: string;
 }
@@ -236,35 +237,30 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
   }
 
   return (
-    <div className="flex flex-col gap-5 pb-8 max-w-xl mx-auto px-4 py-4">
-      {/* Header */}
-      <div>
-        <Link
-          href="/perfil"
-          className="inline-flex items-center gap-1.5 text-body-sm text-[var(--ink-muted)] hover:text-[var(--ink)] mb-1 transition-colors"
-        >
-          <ArrowLeft size={16} />
-          <span>Perfil</span>
-        </Link>
-        <AppHeader
-          title="Pastoreio"
-          subtitle="Registro de visitas pastorais"
-          right={
-            <Button
-              size="sm"
-              onClick={() => {
-                setEditingVisit(null);
-                setFormOpen(true);
-              }}
-            >
-              <Plus size={16} className="mr-1" />
-              Nova visita
-            </Button>
-          }
-        />
-      </div>
+    <div className="flex flex-col gap-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 pb-28 lg:pb-12">
+      <AppHeader
+        title="Registro de Pastoreio"
+        subtitle="Registro confidencial de visitas pastorais"
+        backHref="/congregacao"
+        right={
+          <Button
+            variant="primary"
+            size="sm"
+            className="rounded-full px-3.5 h-9"
+            onClick={() => {
+              setEditingVisit(null);
+              setFormOpen(true);
+            }}
+          >
+            <Plus size={16} className="mr-1" />
+            Nova visita
+          </Button>
+        }
+      />
 
       {/* Security alert if PIN is not configured */}
+
+
       {!hasPinConfigured && (
         <div className="flex items-start gap-3 p-3.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-body-sm text-amber-800 dark:text-amber-200">
           <ShieldAlert size={18} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />

@@ -158,17 +158,17 @@ export function ContatosClient({ userId }: ContatosClientProps) {
       <AppHeader
         title="Interessados"
         right={
-          contacts.length > 0 ? (
-            <Button
-              variant="primary"
-              size="icon"
-              onClick={() => setNewOpen(true)}
-              aria-label="Novo interessado"
-              id="btn-new-contact"
-            >
-              <Plus size={20} />
-            </Button>
-          ) : undefined
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setNewOpen(true)}
+            aria-label="Novo interessado"
+            id="btn-new-contact"
+            className="rounded-full px-3.5 h-9"
+          >
+            <Plus size={16} className="mr-1" />
+            Novo
+          </Button>
         }
       />
 

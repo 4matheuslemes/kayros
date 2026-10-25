@@ -11,13 +11,6 @@ import { useUserPermissions } from "@/contexts/user-permissions-context";
 import { useOnlineSync } from "@/hooks/use-online-sync";
 import { createClient } from "@/lib/supabase/client";
 
-interface ButtonRect {
-  width: number;
-  height: number;
-  top: number;
-  right: number;
-}
-
 interface NavMenuProps {
   fullName?: string;
 }
@@ -70,13 +63,6 @@ export function NavMenu({ fullName }: NavMenuProps = {}) {
   const activeName = displayName || fullName || "";
   const initial = (activeName.trim()?.[0] || "K").toUpperCase();
 
-  const [btnRect, setBtnRect] = useState<ButtonRect>({
-    width: 42,
-    height: 42,
-    top: 20,
-    right: 16,
-  });
-
   const prefersReducedMotion = useMemo(() => {
     if (typeof window === "undefined") return false;
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -106,16 +92,6 @@ export function NavMenu({ fullName }: NavMenuProps = {}) {
   };
 
   const openMenu = () => {
-    if (!buttonRef.current) return;
-    const rect = buttonRef.current.getBoundingClientRect();
-    const right = Math.max(14, window.innerWidth - rect.right);
-    setBtnRect({
-      width: rect.width,
-      height: rect.height,
-      top: rect.top,
-      right,
-    });
-
     setIsMounted(true);
     setIsOpen(true);
     setIsClosing(false);
@@ -153,7 +129,7 @@ export function NavMenu({ fullName }: NavMenuProps = {}) {
       setIsOpen(false);
       setIsClosing(false);
       buttonRef.current?.focus();
-    }, 280);
+    }, 200);
 
     return () => clearTimeout(timer);
   }, [isOpen, isClosing, prefersReducedMotion]);
@@ -263,24 +239,18 @@ export function NavMenu({ fullName }: NavMenuProps = {}) {
       </button>
 
       {mounted && isMounted && createPortal(
-        <>
-          {/* Backdrop with light dimming and 6px blur */}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop ocupando toda a tela que fecha ao clicar fora */}
           <div
-            className="fixed inset-0 z-50 bg-black/25 backdrop-blur-[6px]"
+            className="fixed inset-0 bg-black/35 backdrop-blur-sm transition-opacity duration-200"
             style={{
               opacity: isExpanded && !isClosing ? 1 : 0,
-              transition: prefersReducedMotion
-                ? "none"
-                : isExpanded && !isClosing
-                ? "opacity 420ms cubic-bezier(.2,.8,.2,1)"
-                : "opacity 280ms cubic-bezier(.2,.8,.2,1)",
-              willChange: "opacity",
             }}
             onClick={closeMenu}
             aria-hidden="true"
           />
 
-          {/* Morphing Panel (Estilo America.gov) */}
+          {/* Cartão do menu 100% centralizado */}
           <div
             ref={panelRef}
             id="nav-menu-panel"
@@ -288,37 +258,16 @@ export function NavMenu({ fullName }: NavMenuProps = {}) {
             aria-modal="true"
             aria-label="Menu principal"
             className={cn(
-              "fixed z-50 overflow-hidden",
-              "border border-[var(--border)]",
-              "shadow-[0_20px_50px_rgba(0,0,0,0.18)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)]",
-              "p-4 sm:p-5 flex flex-col"
+              "relative z-10 w-[min(92vw,360px)] rounded-[28px] bg-[var(--surface)] p-6",
+              "border border-[var(--border)] shadow-[var(--shadow-card)]",
+              "flex flex-col transition-all duration-200 ease-out",
+              isExpanded && !isClosing
+                ? "scale-100 opacity-100 translate-y-0"
+                : "scale-95 opacity-0 translate-y-2"
             )}
-            style={{
-              top: `${btnRect.top}px`,
-              right: `${btnRect.right}px`,
-              width: "min(calc(100vw - 28px), 360px)",
-              maxWidth: "calc(100vw - 28px)",
-              borderRadius: "28px",
-              backgroundColor: "var(--surface)",
-              clipPath: isExpanded && !isClosing
-                ? "inset(0px 0px 0px 0px round 28px)"
-                : `inset(0px 0px calc(100% - ${btnRect.height}px) calc(100% - ${btnRect.width}px) round 999px)`,
-              transition: prefersReducedMotion
-                ? "none"
-                : isExpanded && !isClosing
-                ? "clip-path 420ms cubic-bezier(.2,.8,.2,1)"
-                : "clip-path 280ms cubic-bezier(.2,.8,.2,1)",
-              willChange: "clip-path",
-            }}
           >
             {/* Top row: 3 circular buttons (32px) for theme + sync status on top-left, circular Close on top-right */}
-            <div
-              className="flex items-center justify-between pb-3"
-              style={{
-                opacity: isExpanded && !isClosing ? 1 : 0,
-                transition: prefersReducedMotion ? "none" : "opacity 160ms ease-out 60ms",
-              }}
-            >
+            <div className="flex items-center justify-between pb-3">
               {/* Top-left: Theme toggles + Sync status */}
               <div className="flex items-center gap-1.5">
                 <button
@@ -392,7 +341,7 @@ export function NavMenu({ fullName }: NavMenuProps = {}) {
                   "flex items-center justify-center",
                   "text-[var(--ink)] hover:text-[var(--primary)]",
                   "bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/15",
-                  "transition-colors active:scale-95",
+                  "transition-colors active:scale-95 cursor-pointer",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
                 )}
               >
@@ -402,13 +351,7 @@ export function NavMenu({ fullName }: NavMenuProps = {}) {
 
             {/* Cabeçalho interno discreto: Nome do usuário */}
             {activeName && (
-              <div
-                className="pt-1 pb-2 text-center border-b border-[var(--border)]/40 mb-1"
-                style={{
-                  opacity: isExpanded && !isClosing ? 1 : 0,
-                  transition: prefersReducedMotion ? "none" : "opacity 160ms ease-out 80ms",
-                }}
-              >
+              <div className="pt-1 pb-2 text-center border-b border-[var(--border)]/40 mb-2">
                 <p className="text-[11px] uppercase tracking-wider font-sans font-medium text-[var(--ink-muted)]">
                   Conta
                 </p>
@@ -418,12 +361,12 @@ export function NavMenu({ fullName }: NavMenuProps = {}) {
               </div>
             )}
 
-            {/* Panel Body: Links in serif (font-display), centered horizontally, text-2xl */}
+            {/* Panel Body: Links in serif (font-display), centered horizontally */}
             <nav
-              className="flex flex-col items-center justify-center py-4 space-y-1.5"
+              className="flex flex-col items-center justify-center py-2 space-y-1"
               aria-label="Destinos do menu"
             >
-              {links.map((item, index) => {
+              {links.map((item) => {
                 const isActive =
                   item.href === "/"
                     ? pathname === "/"
@@ -440,7 +383,7 @@ export function NavMenu({ fullName }: NavMenuProps = {}) {
                     }}
                     aria-current={isActive ? "page" : undefined}
                     className={cn(
-                      "w-full text-center py-2 px-3 rounded-2xl min-h-[44px] flex items-center justify-center",
+                      "w-full text-center py-2.5 px-3 rounded-2xl min-h-[44px] flex items-center justify-center",
                       "transition-all duration-150",
                       "hover:bg-black/[0.04] dark:hover:bg-white/5",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]",
@@ -448,22 +391,8 @@ export function NavMenu({ fullName }: NavMenuProps = {}) {
                         ? "text-[var(--primary)] font-semibold"
                         : "text-[var(--ink)] hover:text-[var(--primary)] font-normal"
                     )}
-                    style={{
-                      opacity: isExpanded && !isClosing ? 1 : 0,
-                      transform: isExpanded && !isClosing ? "translateY(0)" : "translateY(8px)",
-                      transition: prefersReducedMotion
-                        ? "none"
-                        : isExpanded && !isClosing
-                        ? "opacity 240ms ease-out, transform 240ms cubic-bezier(.2,.8,.2,1)"
-                        : "opacity 140ms ease, transform 140ms ease",
-                      transitionDelay: prefersReducedMotion
-                        ? "0ms"
-                        : isExpanded && !isClosing
-                        ? `${100 + index * 35}ms`
-                        : "0ms",
-                    }}
                   >
-                    <span className="font-display text-[25px] tracking-tight leading-tight">
+                    <span className="font-display text-[22px] tracking-tight leading-tight">
                       {item.label}
                     </span>
                   </Link>
@@ -471,7 +400,7 @@ export function NavMenu({ fullName }: NavMenuProps = {}) {
               })}
             </nav>
           </div>
-        </>,
+        </div>,
         document.body
       )}
     </>

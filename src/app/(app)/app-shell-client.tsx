@@ -3,18 +3,21 @@
 import { useMemo } from "react";
 import { useOnlineSync } from "@/hooks/use-online-sync";
 import { BottomNav } from "@/components/layout/bottom-nav";
+import { DesktopSidebar } from "@/components/layout/desktop-sidebar";
 import { Toaster } from "sonner";
 import { usePathname } from "next/navigation";
 import { AppLockGate } from "@/components/security/app-lock-gate";
 import { PwaUpdatePrompt } from "@/components/pwa/update-prompt";
 import { FLOATING_NAV_ITEMS } from "@/lib/constants";
 import { UserPermissionsProvider } from "@/contexts/user-permissions-context";
+import { cn } from "@/lib/utils";
 import {
   type UserPermissions,
   type FloatingNavId,
   isFloatingItemAllowed,
   derivePermissions,
 } from "@/lib/permissions";
+
 
 interface AppShellClientProps {
   children: React.ReactNode;
@@ -68,9 +71,20 @@ export function AppShellClient({
             </div>
           )}
 
-          <main className="flex-1 overflow-y-auto">
+          {/* Sidebar Desktop (visível apenas em telas >= 1024px) */}
+          {!isPresentation && pathname !== "/onboarding" && (
+            <DesktopSidebar permissions={permissions} />
+          )}
+
+          <main
+            className={cn(
+              "flex-1 overflow-y-auto",
+              !isPresentation && pathname !== "/onboarding" && "lg:pl-[248px]"
+            )}
+          >
             <div className="page-content">{children}</div>
           </main>
+
 
           {hasVisibleFloatingNav && <BottomNav permissions={permissions} />}
           <Toaster

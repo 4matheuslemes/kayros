@@ -6,8 +6,9 @@ import { IrmaosClient } from "./irmaos-client";
 import { fetchUserPermissions } from "@/lib/permissions";
 
 export const metadata: Metadata = {
-  title: "Irmãos e Grupos",
+  title: "Todos os publicadores",
 };
+
 
 export default async function IrmaosPage() {
   const supabase = await createClient();

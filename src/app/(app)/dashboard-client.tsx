@@ -16,8 +16,8 @@ import {
   Plus,
 } from "lucide-react";
 import { NavMenu } from "@/components/layout/nav-menu";
-import { DesktopNavLinks } from "@/components/layout/desktop-nav-links";
 import { SyncStatusIndicator } from "@/components/layout/sync-status-indicator";
+
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { DailyEncouragement } from "@/components/dashboard/daily-encouragement";
 import { HoursRegistrationCard } from "@/components/dashboard/hours-registration-card";
@@ -352,8 +352,8 @@ export function DashboardClient({
     const defaultTargetHref = perms.canUseTalks
       ? "/discursos"
       : perms.canViewMembers
-      ? "/irmaos"
-      : "/contatos";
+        ? "/irmaos"
+        : "/contatos";
 
     return (
       <>
@@ -411,40 +411,38 @@ export function DashboardClient({
           )}
           aria-label="Hero editorial de boas-vindas"
         >
-          {/* Cabeçalho dentro do Hero: Marca Kairós à esquerda + Menu azul-marinho à direita */}
-          <div className="flex items-center justify-between gap-4">
+          {/* Cabeçalho dentro do Hero: Visível apenas no Mobile (< 1024px) pois no Desktop temos a Sidebar */}
+          <div className="lg:hidden flex items-center justify-between gap-4">
             <Link href="/" className="flex items-center gap-2.5 group">
               <Image
                 src="/kairos-mark-transparent.svg"
                 alt="Kairós"
-                width={28}
-                height={28}
-                className="w-7 h-7 object-contain"
+                width={26}
+                height={26}
+                className="w-[26px] h-[26px] object-contain"
                 priority
               />
-              <span className="font-display font-semibold text-2xl lg:text-3xl tracking-tight text-[var(--ink)]">
+              <span className="font-display font-semibold text-2xl tracking-tight text-[var(--ink)]">
                 Kairós
               </span>
             </Link>
 
-            <div className="flex items-center gap-3">
-              <DesktopNavLinks />
-              <NavMenu fullName={profile.full_name} />
-            </div>
+            <NavMenu fullName={profile.full_name} />
           </div>
 
-          {/* Título Gigante Centralizado */}
-          <div className="text-center max-w-3xl mx-auto mt-10 lg:mt-14">
+          {/* Título Centralizado do Hero */}
+          <div className="text-center max-w-3xl mx-auto mt-6 lg:mt-4">
             <h1
-              className="font-display font-normal text-[var(--ink)] tracking-[-0.035em] leading-[1]"
-              style={{ fontSize: "clamp(2.75rem, 7vw, 5rem)" }}
+              className="font-display font-normal text-[var(--ink)] tracking-[-0.035em] leading-[1.05]"
+              style={{ fontSize: "clamp(2.25rem, 4.5vw, 3.5rem)" }}
             >
               {greeting}, {firstName}
             </h1>
-            <div className="mt-4 max-w-xl mx-auto">
+            <div className="mt-3.5 max-w-xl mx-auto">
               <DailyEncouragement className="text-center text-base lg:text-lg text-[var(--ink-muted)] leading-relaxed" />
             </div>
           </div>
+
 
           {/* ─────────────────────────────────────────────────────────
               A) NO MOBILE (< 1024px): Foco em Campo
@@ -479,287 +477,287 @@ export function DashboardClient({
               "max-w-4xl mx-auto w-full mt-12"
             )}
           >
-              {/* Grid de trabalho de mesa (Discursos, Pastoreio/Irmãos, Estudos) */}
-              <div
-                className={cn(
-                  "grid gap-5 items-stretch",
-                  desktopModuleCount >= 3
-                    ? "grid-cols-3"
-                    : desktopModuleCount === 2
+            {/* Grid de trabalho de mesa (Discursos, Pastoreio/Irmãos, Estudos) */}
+            <div
+              className={cn(
+                "grid gap-5 items-stretch",
+                desktopModuleCount >= 3
+                  ? "grid-cols-3"
+                  : desktopModuleCount === 2
                     ? "grid-cols-2"
                     : "grid-cols-1"
-                )}
-              >
-                {/* 1. DISCURSOS: Preparação e Estudo (se canUseTalks) */}
-                {perms.canUseTalks && (
-                  <div className="rounded-[24px] bg-[var(--panel)] p-5 flex flex-col justify-between border border-[var(--border)]/60 hover:border-[var(--primary)]/40 transition-colors">
-                    <div>
-                      <div className="flex items-center justify-between gap-2 mb-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] flex items-center justify-center shrink-0">
-                            <BookOpenText size={16} />
-                          </div>
-                          <span className="text-xs font-semibold text-[var(--ink)] uppercase tracking-wider">
-                            Discursos
-                          </span>
+              )}
+            >
+              {/* 1. DISCURSOS: Preparação e Estudo (se canUseTalks) */}
+              {perms.canUseTalks && (
+                <div className="rounded-[24px] bg-[var(--panel)] p-5 flex flex-col justify-between border border-[var(--border)]/60 hover:border-[var(--primary)]/40 transition-colors">
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] flex items-center justify-center shrink-0">
+                          <BookOpenText size={16} />
                         </div>
-                        {latestOutline && (
-                          <span className="text-[11px] font-medium text-[var(--ink-muted)] bg-[var(--surface)] px-2.5 py-0.5 rounded-full border border-[var(--border)]/60">
-                            ~{minutesFromWords(latestOutline.word_count)} min
-                          </span>
-                        )}
-                      </div>
-
-                      {latestOutline ? (
-                        <div className="flex flex-col gap-1 mt-2">
-                          <h4 className="font-display font-semibold text-base text-[var(--ink)] leading-snug line-clamp-2">
-                            {latestOutline.title}
-                          </h4>
-                          <p className="text-xs text-[var(--ink-muted)] mt-1">
-                            {latestOutline.category || "Esboço de discurso"} • Editado{" "}
-                            {formatRelativeDate(latestOutline.updated_at)}
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col gap-1 mt-2">
-                          <h4 className="font-display font-semibold text-base text-[var(--ink)] leading-snug">
-                            Preparação de Discursos
-                          </h4>
-                          <p className="text-xs text-[var(--ink-muted)] mt-1">
-                            Crie e edite seus esboços com versículos bíblicos integrados e controle de tempo.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="pt-4 mt-3 border-t border-[var(--border)]/60 flex items-center justify-between">
-                      {latestOutline ? (
-                        <Link
-                          href={`/discursos/${latestOutline.id}`}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--primary)] text-white text-xs font-semibold hover:opacity-95 transition-opacity"
-                        >
-                          <span>Continuar esboço</span>
-                          <ArrowRight size={13} />
-                        </Link>
-                      ) : (
-                        <Link
-                          href="/discursos"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--primary)] text-white text-xs font-semibold hover:opacity-95 transition-opacity"
-                        >
-                          <span>Novo esboço</span>
-                          <ArrowRight size={13} />
-                        </Link>
-                      )}
-
-                      <Link
-                        href="/discursos"
-                        className="text-xs font-medium text-[var(--ink-muted)] hover:text-[var(--primary)] transition-colors"
-                      >
-                        Ver todos
-                      </Link>
-                    </div>
-                  </div>
-                )}
-
-                {/* 2. PASTOREIO & GRUPOS: Cuidado do Rebanho (se canUseShepherding || canViewMembers) */}
-                {(perms.canUseShepherding || perms.canViewMembers) && (
-                  <div className="rounded-[24px] bg-[var(--panel)] p-5 flex flex-col justify-between border border-[var(--border)]/60 hover:border-[var(--primary)]/40 transition-colors">
-                    <div>
-                      <div className="flex items-center justify-between gap-2 mb-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] flex items-center justify-center shrink-0">
-                            <ShieldCheck size={16} />
-                          </div>
-                          <span className="text-xs font-semibold text-[var(--ink)] uppercase tracking-wider">
-                            Pastoreio & Grupos
-                          </span>
-                        </div>
-                        {myGroupInfo && (
-                          <span className="text-[11px] font-medium text-[var(--ink)] bg-[var(--surface)] px-2.5 py-0.5 rounded-full border border-[var(--border)]/60">
-                            Grupo {myGroupInfo.sort_order}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex flex-col gap-1.5 mt-2">
-                        {perms.canUseShepherding ? (
-                          <>
-                            <div className="flex items-baseline gap-1.5">
-                              <span className="font-display font-semibold text-2xl text-[var(--ink)]">
-                                {pastoralData?.dueCount ?? 0}
-                              </span>
-                              <span className="text-xs text-[var(--ink-muted)] font-medium">
-                                {(pastoralData?.dueCount ?? 0) === 1
-                                  ? "irmão na hora de visitar"
-                                  : "irmãos na hora de visitar"}
-                              </span>
-                            </div>
-
-                            {pastoralData?.latestVisit ? (
-                              <p className="text-xs text-[var(--ink-muted)] line-clamp-2">
-                                Última visita:{" "}
-                                <strong className="text-[var(--ink)] font-medium">
-                                  {pastoralData.latestVisit.family_or_person}
-                                </strong>{" "}
-                                ({formatRelativeDate(pastoralData.latestVisit.visit_date)})
-                              </p>
-                            ) : (
-                              <p className="text-xs text-[var(--ink-muted)]">
-                                Mantenha o acompanhamento confidencial do rebanho em dia.
-                              </p>
-                            )}
-                          </>
-                        ) : myGroupInfo ? (
-                          <>
-                            <h4 className="font-display font-semibold text-base text-[var(--ink)]">
-                              {myGroupInfo.sort_order}. {myGroupInfo.name}
-                            </h4>
-                            <p className="text-xs text-[var(--ink-muted)]">
-                              {myGroupInfo.meeting_info || "Grupo de serviço de campo da congregação."}
-                            </p>
-                          </>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    <div className="pt-4 mt-3 border-t border-[var(--border)]/60 flex items-center justify-between">
-                      {perms.canUseShepherding ? (
-                        <Link
-                          href="/pastoreio"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--primary)] text-white text-xs font-semibold hover:opacity-95 transition-opacity"
-                        >
-                          <span>Registrar visita</span>
-                          <ArrowRight size={13} />
-                        </Link>
-                      ) : (
-                        <Link
-                          href="/irmaos"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--primary)] text-white text-xs font-semibold hover:opacity-95 transition-opacity"
-                        >
-                          <span>Ver grupos</span>
-                          <ArrowRight size={13} />
-                        </Link>
-                      )}
-
-                      {perms.canViewMembers && (
-                        <Link
-                          href="/irmaos"
-                          className="text-xs font-medium text-[var(--ink-muted)] hover:text-[var(--primary)] transition-colors"
-                        >
-                          Irmãos
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* 3. INTERESSADOS & ESTUDOS (se canUseContacts) */}
-                {perms.canUseContacts && (
-                  <div className="rounded-[24px] bg-[var(--panel)] p-5 flex flex-col justify-between border border-[var(--border)]/60 hover:border-[var(--primary)]/40 transition-colors">
-                    <div>
-                      <div className="flex items-center justify-between gap-2 mb-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-[var(--success)]/15 text-[var(--success)] flex items-center justify-center shrink-0">
-                            <Users size={16} />
-                          </div>
-                          <span className="text-xs font-semibold text-[var(--ink)] uppercase tracking-wider">
-                            Estudos & Revisitas
-                          </span>
-                        </div>
-                        <span className="text-[11px] font-semibold text-[var(--success)] bg-[var(--success)]/10 px-2.5 py-0.5 rounded-full">
-                          {estudosAtivos} {estudosAtivos === 1 ? "ativo" : "ativos"}
+                        <span className="text-xs font-semibold text-[var(--ink)] uppercase tracking-wider">
+                          Discursos
                         </span>
                       </div>
+                      {latestOutline && (
+                        <span className="text-[11px] font-medium text-[var(--ink-muted)] bg-[var(--surface)] px-2.5 py-0.5 rounded-full border border-[var(--border)]/60">
+                          ~{minutesFromWords(latestOutline.word_count)} min
+                        </span>
+                      )}
+                    </div>
 
+                    {latestOutline ? (
                       <div className="flex flex-col gap-1 mt-2">
-                        <div className="flex items-baseline gap-2">
-                          <span className="font-display font-semibold text-2xl text-[var(--ink)]">
-                            {estudosAtivos + revisitas}
-                          </span>
-                          <span className="text-xs text-[var(--ink-muted)] font-medium">
-                            pessoas em acompanhamento
-                          </span>
-                        </div>
+                        <h4 className="font-display font-semibold text-base text-[var(--ink)] leading-snug line-clamp-2">
+                          {latestOutline.title}
+                        </h4>
                         <p className="text-xs text-[var(--ink-muted)] mt-1">
-                          {revisitas} {revisitas === 1 ? "revisita" : "revisitas"} e {estudosAtivos}{" "}
-                          {estudosAtivos === 1 ? "estudo bíblico" : "estudos bíblicos"}. Prepare suas anotações antes de sair.
+                          {latestOutline.category || "Esboço de discurso"} • Editado{" "}
+                          {formatRelativeDate(latestOutline.updated_at)}
                         </p>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="flex flex-col gap-1 mt-2">
+                        <h4 className="font-display font-semibold text-base text-[var(--ink)] leading-snug">
+                          Preparação de Discursos
+                        </h4>
+                        <p className="text-xs text-[var(--ink-muted)] mt-1">
+                          Crie e edite seus esboços com versículos bíblicos integrados e controle de tempo.
+                        </p>
+                      </div>
+                    )}
+                  </div>
 
-                    <div className="pt-4 mt-3 border-t border-[var(--border)]/60 flex items-center justify-between">
+                  <div className="pt-4 mt-3 border-t border-[var(--border)]/60 flex items-center justify-between">
+                    {latestOutline ? (
                       <Link
-                        href="/contatos"
+                        href={`/discursos/${latestOutline.id}`}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--primary)] text-white text-xs font-semibold hover:opacity-95 transition-opacity"
                       >
-                        <span>Abrir interessados</span>
+                        <span>Continuar esboço</span>
                         <ArrowRight size={13} />
                       </Link>
-
-                      {profile.meeting_link && (
-                        <button
-                          type="button"
-                          onClick={handleShareLetterInvite}
-                          className="text-xs font-medium text-[var(--ink-muted)] hover:text-[var(--primary)] transition-colors cursor-pointer flex items-center gap-1"
-                        >
-                          <Share2 size={12} />
-                          <span>Cartas</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Registro de Horas como Coadjuvante Discreto no Desktop (se canUseHours) */}
-              {perms.canUseHours && (
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-5 py-3.5 rounded-2xl bg-[var(--panel)]/70 dark:bg-white/[0.04] border border-[var(--border)]/60">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] flex items-center justify-center shrink-0">
-                      <Clock size={16} />
-                    </div>
-                    <div className="flex items-baseline gap-2 flex-wrap">
-                      <span className="text-xs font-semibold text-[var(--ink-muted)] uppercase tracking-wider">
-                        Ministério neste mês:
-                      </span>
-                      <span className="font-display font-semibold text-base sm:text-lg text-[var(--ink)]">
-                        {hoursDoneFormatted}
-                      </span>
-                      <span className="text-xs text-[var(--ink-muted)]">
-                        de {profile.monthly_goal_hours}h
-                      </span>
-                      <span className="text-xs text-[var(--ink-muted)] font-medium hidden sm:inline">
-                        • Faltam {formatHours(goalCalc.hoursRemaining)}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setDesktopManualOpen(true)}
-                      className={cn(
-                        "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full",
-                        "bg-[var(--surface)] text-[var(--ink)] text-xs font-semibold",
-                        "hover:bg-black/5 dark:hover:bg-white/10 border border-[var(--border)]",
-                        "shadow-xs transition-colors cursor-pointer"
-                      )}
-                      aria-label="Lançar horas manualmente"
-                    >
-                      <Plus size={13} className="text-[var(--primary)]" />
-                      <span>Lançar horas manualmente</span>
-                    </button>
+                    ) : (
+                      <Link
+                        href="/discursos"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--primary)] text-white text-xs font-semibold hover:opacity-95 transition-opacity"
+                      >
+                        <span>Novo esboço</span>
+                        <ArrowRight size={13} />
+                      </Link>
+                    )}
 
                     <Link
-                      href="/historico"
-                      className="text-xs font-medium text-[var(--primary)] hover:underline underline-offset-4 hidden md:inline"
+                      href="/discursos"
+                      className="text-xs font-medium text-[var(--ink-muted)] hover:text-[var(--primary)] transition-colors"
                     >
-                      Ver detalhes →
+                      Ver todos
                     </Link>
                   </div>
                 </div>
               )}
+
+              {/* 2. PASTOREIO & GRUPOS: Cuidado do Rebanho (se canUseShepherding || canViewMembers) */}
+              {(perms.canUseShepherding || perms.canViewMembers) && (
+                <div className="rounded-[24px] bg-[var(--panel)] p-5 flex flex-col justify-between border border-[var(--border)]/60 hover:border-[var(--primary)]/40 transition-colors">
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] flex items-center justify-center shrink-0">
+                          <ShieldCheck size={16} />
+                        </div>
+                        <span className="text-xs font-semibold text-[var(--ink)] uppercase tracking-wider">
+                          Pastoreio & Grupos
+                        </span>
+                      </div>
+                      {myGroupInfo && (
+                        <span className="text-[11px] font-medium text-[var(--ink)] bg-[var(--surface)] px-2.5 py-0.5 rounded-full border border-[var(--border)]/60">
+                          Grupo {myGroupInfo.sort_order}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-1.5 mt-2">
+                      {perms.canUseShepherding ? (
+                        <>
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="font-display font-semibold text-2xl text-[var(--ink)]">
+                              {pastoralData?.dueCount ?? 0}
+                            </span>
+                            <span className="text-xs text-[var(--ink-muted)] font-medium">
+                              {(pastoralData?.dueCount ?? 0) === 1
+                                ? "irmão na hora de visitar"
+                                : "irmãos na hora de visitar"}
+                            </span>
+                          </div>
+
+                          {pastoralData?.latestVisit ? (
+                            <p className="text-xs text-[var(--ink-muted)] line-clamp-2">
+                              Última visita:{" "}
+                              <strong className="text-[var(--ink)] font-medium">
+                                {pastoralData.latestVisit.family_or_person}
+                              </strong>{" "}
+                              ({formatRelativeDate(pastoralData.latestVisit.visit_date)})
+                            </p>
+                          ) : (
+                            <p className="text-xs text-[var(--ink-muted)]">
+                              Mantenha o acompanhamento confidencial do rebanho em dia.
+                            </p>
+                          )}
+                        </>
+                      ) : myGroupInfo ? (
+                        <>
+                          <h4 className="font-display font-semibold text-base text-[var(--ink)]">
+                            {myGroupInfo.sort_order}. {myGroupInfo.name}
+                          </h4>
+                          <p className="text-xs text-[var(--ink-muted)]">
+                            {myGroupInfo.meeting_info || "Grupo de serviço de campo da congregação."}
+                          </p>
+                        </>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <div className="pt-4 mt-3 border-t border-[var(--border)]/60 flex items-center justify-between">
+                    {perms.canUseShepherding ? (
+                      <Link
+                        href="/pastoreio"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--primary)] text-white text-xs font-semibold hover:opacity-95 transition-opacity"
+                      >
+                        <span>Registrar visita</span>
+                        <ArrowRight size={13} />
+                      </Link>
+                    ) : (
+                      <Link
+                        href="/irmaos"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--primary)] text-white text-xs font-semibold hover:opacity-95 transition-opacity"
+                      >
+                        <span>Ver grupos</span>
+                        <ArrowRight size={13} />
+                      </Link>
+                    )}
+
+                    {perms.canViewMembers && (
+                      <Link
+                        href="/irmaos"
+                        className="text-xs font-medium text-[var(--ink-muted)] hover:text-[var(--primary)] transition-colors"
+                      >
+                        Irmãos
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* 3. INTERESSADOS & ESTUDOS (se canUseContacts) */}
+              {perms.canUseContacts && (
+                <div className="rounded-[24px] bg-[var(--panel)] p-5 flex flex-col justify-between border border-[var(--border)]/60 hover:border-[var(--primary)]/40 transition-colors">
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-[var(--success)]/15 text-[var(--success)] flex items-center justify-center shrink-0">
+                          <Users size={16} />
+                        </div>
+                        <span className="text-xs font-semibold text-[var(--ink)] uppercase tracking-wider">
+                          Estudos & Revisitas
+                        </span>
+                      </div>
+                      <span className="text-[11px] font-semibold text-[var(--success)] bg-[var(--success)]/10 px-2.5 py-0.5 rounded-full">
+                        {estudosAtivos} {estudosAtivos === 1 ? "ativo" : "ativos"}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col gap-1 mt-2">
+                      <div className="flex items-baseline gap-2">
+                        <span className="font-display font-semibold text-2xl text-[var(--ink)]">
+                          {estudosAtivos + revisitas}
+                        </span>
+                        <span className="text-xs text-[var(--ink-muted)] font-medium">
+                          pessoas em acompanhamento
+                        </span>
+                      </div>
+                      <p className="text-xs text-[var(--ink-muted)] mt-1">
+                        {revisitas} {revisitas === 1 ? "revisita" : "revisitas"} e {estudosAtivos}{" "}
+                        {estudosAtivos === 1 ? "estudo bíblico" : "estudos bíblicos"}. Prepare suas anotações antes de sair.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 mt-3 border-t border-[var(--border)]/60 flex items-center justify-between">
+                    <Link
+                      href="/contatos"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--primary)] text-white text-xs font-semibold hover:opacity-95 transition-opacity"
+                    >
+                      <span>Abrir interessados</span>
+                      <ArrowRight size={13} />
+                    </Link>
+
+                    {profile.meeting_link && (
+                      <button
+                        type="button"
+                        onClick={handleShareLetterInvite}
+                        className="text-xs font-medium text-[var(--ink-muted)] hover:text-[var(--primary)] transition-colors cursor-pointer flex items-center gap-1"
+                      >
+                        <Share2 size={12} />
+                        <span>Cartas</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
+
+            {/* Registro de Horas como Coadjuvante Discreto no Desktop (se canUseHours) */}
+            {perms.canUseHours && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-5 py-3.5 rounded-2xl bg-[var(--panel)]/70 dark:bg-white/[0.04] border border-[var(--border)]/60">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] flex items-center justify-center shrink-0">
+                    <Clock size={16} />
+                  </div>
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <span className="text-xs font-semibold text-[var(--ink-muted)] uppercase tracking-wider">
+                      Ministério neste mês:
+                    </span>
+                    <span className="font-display font-semibold text-base sm:text-lg text-[var(--ink)]">
+                      {hoursDoneFormatted}
+                    </span>
+                    <span className="text-xs text-[var(--ink-muted)]">
+                      de {profile.monthly_goal_hours}h
+                    </span>
+                    <span className="text-xs text-[var(--ink-muted)] font-medium hidden sm:inline">
+                      • Faltam {formatHours(goalCalc.hoursRemaining)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setDesktopManualOpen(true)}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full",
+                      "bg-[var(--surface)] text-[var(--ink)] text-xs font-semibold",
+                      "hover:bg-black/5 dark:hover:bg-white/10 border border-[var(--border)]",
+                      "shadow-xs transition-colors cursor-pointer"
+                    )}
+                    aria-label="Lançar horas manualmente"
+                  >
+                    <Plus size={13} className="text-[var(--primary)]" />
+                    <span>Lançar horas manualmente</span>
+                  </button>
+
+                  <Link
+                    href="/historico"
+                    className="text-xs font-medium text-[var(--primary)] hover:underline underline-offset-4 hidden md:inline"
+                  >
+                    Ver detalhes →
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
         </section>
       </Reveal>
 
@@ -824,15 +822,15 @@ export function DashboardClient({
                     goalCalc.paceStatus === "ahead"
                       ? "text-[var(--success)]"
                       : goalCalc.paceStatus === "on_pace"
-                      ? "text-[var(--primary)]"
-                      : "text-[var(--alert)]"
+                        ? "text-[var(--primary)]"
+                        : "text-[var(--alert)]"
                   )}
                 >
                   {goalCalc.paceStatus === "ahead"
                     ? "Seu ritmo está adiantado em relação ao esperado para hoje."
                     : goalCalc.paceStatus === "on_pace"
-                    ? "Seu ritmo está em dia com a sua programação."
-                    : "Abaixo da média programada para este período."}
+                      ? "Seu ritmo está em dia com a sua programação."
+                      : "Abaixo da média programada para este período."}
                 </span>
               </p>
 

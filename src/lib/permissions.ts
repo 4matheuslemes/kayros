@@ -121,6 +121,7 @@ export type FloatingNavId =
   | "inicio"
   | "interessados"
   | "discursos"
+  | "congregacao"
   | "irmaos"
   | "pastoreio"
   | "historico";
@@ -136,6 +137,8 @@ export function isFloatingItemAllowed(
       return permissions.canUseHours;
     case "discursos":
       return permissions.canUseTalks;
+    case "congregacao":
+      return permissions.canViewMembers || permissions.canUseShepherding;
     case "irmaos":
       return permissions.canViewMembers;
     case "pastoreio":
@@ -145,3 +148,4 @@ export function isFloatingItemAllowed(
       return true;
   }
 }
+

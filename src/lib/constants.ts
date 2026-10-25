@@ -7,15 +7,15 @@ export const APP_NAME = "Kairós" as const;
 export const APP_DESCRIPTION = "Registro pessoal de atividade de pregação";
 export const APP_SLUG = "kairos" as const;
 
-// IDs possíveis: "inicio" | "interessados" | "discursos" | "irmaos" | "pastoreio"
+// IDs possíveis: "inicio" | "interessados" | "discursos" | "congregacao"
 // Array vazio = a barra flutuante some por completo (e o espaço inferior reservado volta a 0).
 export const FLOATING_NAV_ITEMS = [
   "inicio",
   "interessados",
   "discursos",
-  "irmaos",
-  "pastoreio",
+  "congregacao",
 ] as const;
+
 
 export const SHEPHERDING_REVISIT_MONTHS = 8;
 

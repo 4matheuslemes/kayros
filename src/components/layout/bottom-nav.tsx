@@ -7,14 +7,14 @@ import {
   Home,
   Users,
   BookOpenText,
-  UsersRound,
-  HeartHandshake,
+  Building2,
   ChevronUp,
   User,
   ScrollText,
   FileText,
   UserPlus,
 } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 import { lightTap } from "@/lib/haptics";
 import { useUserPermissions } from "@/contexts/user-permissions-context";
@@ -104,8 +104,7 @@ export function BottomNav({ permissions: propPermissions }: BottomNavProps) {
   // 1. Início (/) - always
   // 2. Interessados (/contatos) - canUseContacts
   // 3. Discursos (/discursos) - canUseTalks
-  // 4. Irmãos (/irmaos) - canViewMembers
-  // 5. Pastoreio (/pastoreio) - canUseShepherding
+  // 4. Congregação (/congregacao) - canViewMembers || canUseShepherding
   const navItems = useMemo(() => {
     const items = [
       {
@@ -127,16 +126,10 @@ export function BottomNav({ permissions: propPermissions }: BottomNavProps) {
         allowed: permissions.canUseTalks,
       },
       {
-        href: "/irmaos",
-        icon: UsersRound,
-        label: "Irmãos",
-        allowed: permissions.canViewMembers,
-      },
-      {
-        href: "/pastoreio",
-        icon: HeartHandshake,
-        label: "Pastoreio",
-        allowed: permissions.canUseShepherding,
+        href: "/congregacao",
+        icon: Building2,
+        label: "Congregação",
+        allowed: permissions.canViewMembers || permissions.canUseShepherding,
       },
     ];
 
@@ -149,8 +142,13 @@ export function BottomNav({ permissions: propPermissions }: BottomNavProps) {
     if (path === "/") return { icon: Home, label: "Início" };
     if (path.startsWith("/contatos")) return { icon: Users, label: "Interessados" };
     if (path.startsWith("/discursos")) return { icon: BookOpenText, label: "Discursos" };
-    if (path.startsWith("/irmaos")) return { icon: UsersRound, label: "Irmãos" };
-    if (path.startsWith("/pastoreio")) return { icon: HeartHandshake, label: "Pastoreio" };
+    if (
+      path.startsWith("/congregacao") ||
+      path.startsWith("/irmaos") ||
+      path.startsWith("/pastoreio")
+    ) {
+      return { icon: Building2, label: "Congregação" };
+    }
     if (path.startsWith("/perfil")) return { icon: User, label: "Perfil" };
     if (path.startsWith("/historico")) return { icon: ScrollText, label: "Histórico" };
     if (path.startsWith("/relatorio")) return { icon: FileText, label: "Relatório" };
@@ -169,14 +167,19 @@ export function BottomNav({ permissions: propPermissions }: BottomNavProps) {
       aria-label="Navegação principal"
       className={cn(
         "lg:hidden",
-        "fixed z-40 bottom-[calc(env(safe-area-inset-bottom)+1rem)] left-1/2 -translate-x-1/2",
+        "fixed z-40 bottom-[calc(env(safe-area-inset-bottom)+24px)] left-1/2 -translate-x-1/2",
         "transition-all duration-350 ease-[cubic-bezier(0.22,1,0.36,1)] select-none",
-        "border border-[var(--border)]/70 shadow-[var(--shadow-card)] rounded-full",
-        "bg-[var(--surface)]/88 backdrop-blur-xl",
+        "border border-white/50 dark:border-white/10",
+        "shadow-[0_12px_36px_rgba(30,58,95,0.16)] dark:shadow-[0_12px_36px_rgba(0,0,0,0.45)] rounded-full",
         isCollapsed
-          ? "h-11 px-4 flex items-center gap-2 cursor-pointer shadow-md hover:scale-[1.02] active:scale-95"
-          : "px-2 py-1.5 flex items-center gap-1 sm:gap-1.5 max-w-[calc(100vw-1.5rem)] overflow-x-auto no-scrollbar"
+          ? "h-[50px] px-5 flex items-center justify-center gap-2.5 cursor-pointer active:scale-95"
+          : "min-h-[64px] px-3 py-2 flex items-center gap-1.5 max-w-[calc(100vw-1.5rem)] overflow-x-auto no-scrollbar"
       )}
+      style={{
+        backgroundColor: "var(--liquid-glass-bg, rgba(255, 255, 255, 0.72))",
+        backdropFilter: "blur(24px) saturate(190%)",
+        WebkitBackdropFilter: "blur(24px) saturate(190%)",
+      }}
       onClick={isCollapsed ? () => { lightTap(); setIsCollapsed(false); } : undefined}
       role={isCollapsed ? "button" : undefined}
       tabIndex={isCollapsed ? 0 : undefined}
@@ -193,30 +196,34 @@ export function BottomNav({ permissions: propPermissions }: BottomNavProps) {
     >
       {isCollapsed ? (
         // Estado 2 — Mini-pílula compacta
-        <div className="flex items-center gap-2 text-xs font-medium text-[var(--ink)] whitespace-nowrap">
+        <div className="flex items-center gap-2.5 text-sm font-semibold text-[var(--ink)] whitespace-nowrap">
           <CurrentIcon
-            size={18}
+            size={20}
             className="text-[var(--primary)] shrink-0"
             strokeWidth={2.2}
           />
-          <span className="font-sans font-medium">{currentSection.label}</span>
+          <span className="font-sans font-semibold text-sm">{currentSection.label}</span>
           {timerText && (
             <span className="text-xs font-mono font-semibold text-[var(--accent)] shrink-0 flex items-center gap-1">
               • ⏱ {timerText}
             </span>
           )}
           <ChevronUp
-            size={14}
+            size={16}
             className="text-[var(--ink-muted)] shrink-0 ml-0.5"
             strokeWidth={2.2}
           />
         </div>
       ) : (
-        // Estado 1 — Expandida com itens operacionais
+        // Estado 1 — Expandida com itens operacionais encorpados
         navItems.map(({ href, icon: Icon, label }) => {
           const active =
             href === "/"
               ? optimisticPath === "/"
+              : href === "/congregacao"
+              ? optimisticPath.startsWith("/congregacao") ||
+                optimisticPath.startsWith("/irmaos") ||
+                optimisticPath.startsWith("/pastoreio")
               : optimisticPath.startsWith(href);
 
           return (
@@ -229,26 +236,27 @@ export function BottomNav({ permissions: propPermissions }: BottomNavProps) {
                 setOptimisticPath(href);
               }}
               className={cn(
-                "flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-full transition-all duration-150",
+                "px-3 sm:px-4 py-2 rounded-full flex flex-col items-center justify-center gap-1 min-w-[62px] sm:min-w-[68px] transition-all duration-150",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]",
                 active
-                  ? "bg-[var(--primary)] text-white shadow-xs"
+                  ? "bg-[var(--primary)] text-white shadow-sm"
                   : "text-[var(--ink-muted)] hover:text-[var(--ink)] hover:bg-black/5 dark:hover:bg-white/5 active:scale-95"
               )}
               aria-current={active ? "page" : undefined}
             >
               <Icon
-                size={18}
+                size={22}
                 strokeWidth={active ? 2.25 : 1.75}
                 className="shrink-0"
               />
-              <span className="text-[11px] font-medium font-sans whitespace-nowrap">
+              <span className="text-[11px] font-medium leading-none font-sans whitespace-nowrap">
                 {label}
               </span>
             </Link>
           );
         })
       )}
+
     </nav>
   );
 }
