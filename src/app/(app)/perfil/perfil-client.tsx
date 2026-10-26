@@ -118,6 +118,20 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
 
   const handleLogout = async () => {
     setLoggingOut(true);
+    try {
+      const db = getDb();
+      await db.delete();
+    } catch (e) {
+      console.warn("Erro ao limpar banco local Dexie:", e);
+    }
+    try {
+      if (typeof window !== "undefined" && "caches" in window) {
+        const cacheKeys = await caches.keys();
+        await Promise.all(cacheKeys.map((k) => caches.delete(k)));
+      }
+    } catch (e) {
+      console.warn("Erro ao limpar caches do Service Worker:", e);
+    }
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/login");

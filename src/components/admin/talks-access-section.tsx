@@ -55,12 +55,12 @@ export function TalksAccessSection() {
     setUpdatingId(user.id);
 
     try {
-      const res = await fetch("/api/admin/talks-access", {
+      const res = await fetch("/api/admin/permissions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userId: user.id,
-          enabled: nextEnabled,
+          talks_access: nextEnabled,
         }),
       });
 

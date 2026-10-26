@@ -65,11 +65,11 @@ export async function POST(req: Request) {
       applyDefaults,
     } = parsed.data;
 
-    // Safety: prevent user from disabling their own admin access
-    if (userId === user.id && is_admin === false) {
+    // M1: Apenas administradores podem alterar is_admin
+    if (is_admin !== undefined && !callerProfile.is_admin) {
       return NextResponse.json(
-        { error: "Você não pode remover seu próprio acesso de administrador." },
-        { status: 400 }
+        { error: "Apenas administradores podem conceder ou revogar acesso de administrador." },
+        { status: 403 }
       );
     }
 
@@ -78,6 +78,21 @@ export async function POST(req: Request) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
+
+    // M1: Prevenir que o último administrador ativo remova seu próprio acesso de admin
+    if (userId === user.id && is_admin === false) {
+      const { count } = await supabaseAdmin
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("is_admin", true);
+
+      if ((count ?? 0) <= 1) {
+        return NextResponse.json(
+          { error: "Você é o único administrador ativo do sistema e não pode remover seu próprio acesso." },
+          { status: 400 }
+        );
+      }
+    }
 
     // If applyDefaults is requested with a member_id
     if (applyDefaults && member_id !== undefined) {
@@ -106,14 +121,15 @@ export async function POST(req: Request) {
       );
 
       if (rpcError) {
+        console.error("Erro em apply_member_default_permissions:", rpcError.message);
         return NextResponse.json(
-          { error: "Erro ao aplicar permissões padrão do membro", details: rpcError.message },
+          { error: "Erro ao aplicar permissões padrão do membro." },
           { status: 500 }
         );
       }
     } else {
       // Normal update
-      const updateData: Record<string, any> = {
+      const updateData: Record<string, unknown> = {
         updated_at: new Date().toISOString(),
       };
 
@@ -133,8 +149,9 @@ export async function POST(req: Request) {
         .eq("id", userId);
 
       if (updateError) {
+        console.error("Erro ao atualizar permissões:", updateError.message);
         return NextResponse.json(
-          { error: "Erro ao atualizar permissões", details: updateError.message },
+          { error: "Erro ao atualizar permissões." },
           { status: 500 }
         );
       }
@@ -153,9 +170,10 @@ export async function POST(req: Request) {
       success: true,
       profile: updatedProfile,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    console.error("Erro interno em /api/admin/permissions:", err);
     return NextResponse.json(
-      { error: "Erro interno do servidor", details: err?.message },
+      { error: "Erro interno do servidor ao processar permissões." },
       { status: 500 }
     );
   }

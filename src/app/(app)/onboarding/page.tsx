@@ -25,7 +25,12 @@ export default async function OnboardingPage() {
 
   // Se já está vinculado a um irmão da congregação com nome preenchido e não relata horas, conclui direto
   if (profile?.member_id && profile?.full_name && !profile?.hours_access) {
-    await supabase
+    const { createClient: createAdminClient } = await import("@supabase/supabase-js");
+    const adminSupabase = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    await adminSupabase
       .from("profiles")
       .update({ onboarding_completed: true })
       .eq("id", user.id);

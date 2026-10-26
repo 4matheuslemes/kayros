@@ -15,8 +15,8 @@ import { Input, Field } from "@/components/ui/input";
 const schema = z
   .object({
     email: z.string().email("Informe um e-mail válido"),
-    password: z.string().min(6, "A senha deve ter no mínimo 6 caracteres"),
-    confirmPassword: z.string().min(6, "Confirme sua senha"),
+    password: z.string().min(8, "A senha deve ter no mínimo 8 caracteres"),
+    confirmPassword: z.string().min(8, "Confirme sua senha"),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "As senhas não coincidem",
@@ -48,13 +48,10 @@ export function InviteAcceptClient({ rawToken, member }: InviteAcceptClientProps
     resolver: zodResolver(schema),
   });
 
-  // Opção 1: Continuar com Google
+  // Opção 1: Continuar com Google (token já protegido no cookie HttpOnly pelo servidor)
   const handleGoogleSignIn = async () => {
     try {
       setGoogleLoading(true);
-
-      // Grava o token no cookie para redundância no callback OAuth
-      document.cookie = `kairos_invite_token=${rawToken}; path=/; max-age=900; SameSite=Lax`;
 
       const supabase = createClient();
       const origin = window.location.origin;
@@ -62,7 +59,7 @@ export function InviteAcceptClient({ rawToken, member }: InviteAcceptClientProps
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${origin}/auth/callback?invite=${encodeURIComponent(rawToken)}`,
+          redirectTo: `${origin}/auth/callback`,
         },
       });
 
@@ -70,8 +67,8 @@ export function InviteAcceptClient({ rawToken, member }: InviteAcceptClientProps
         toast.error("Erro ao iniciar login com Google. Tente novamente.");
         setGoogleLoading(false);
       }
-    } catch (err: any) {
-      console.error(err);
+    } catch (err: unknown) {
+      console.error("Erro ao conectar com Google:", err);
       toast.error("Erro ao conectar com Google.");
       setGoogleLoading(false);
     }

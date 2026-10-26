@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 /// <reference types="@serwist/next/typings" />
 
-import { Serwist, CacheFirst, NetworkFirst, StaleWhileRevalidate, ExpirationPlugin } from "serwist";
+import { Serwist, CacheFirst, NetworkFirst, StaleWhileRevalidate, NetworkOnly, ExpirationPlugin } from "serwist";
 import { defaultCache } from "@serwist/next/worker";
 
 declare global {
@@ -62,21 +62,17 @@ const serwist = new Serwist({
     },
 
     // ─────────────────────────────────────────────────────────
-    // Supabase API calls — NetworkFirst so data is always fresh
-    // when online, falling back to cache when offline.
+    // Supabase API calls & local API — NetworkOnly (M7)
+    // Sensitive congregation data must never be cached in CacheStorage.
+    // Dexie handles offline storage and sync queues safely.
     // ─────────────────────────────────────────────────────────
     {
-      matcher: /^https:\/\/.*\.supabase\.co\/.*/i,
-      handler: new NetworkFirst({
-        cacheName: "supabase-api",
-        networkTimeoutSeconds: 5,
-        plugins: [
-          new ExpirationPlugin({
-            maxAgeSeconds: 24 * 60 * 60,
-            maxEntries: 32,
-          }),
-        ],
-      }),
+      matcher: /^https:\/\/.*\.supabase\.co\/(rest|auth)\/v1\/.*/i,
+      handler: new NetworkOnly(),
+    },
+    {
+      matcher: /\/api\/.*/i,
+      handler: new NetworkOnly(),
     },
 
     // ─────────────────────────────────────────────────────────

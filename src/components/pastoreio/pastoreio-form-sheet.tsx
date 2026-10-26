@@ -135,26 +135,38 @@ export function PastoreioFormSheet({
         setSelectedMemberIds(initialData.member_ids);
       }
 
-      // Load linked members for this visit from database
+      // Load linked members and confidential report from database
       let isMounted = true;
-      const loadLinkedMembers = async () => {
+      const loadLinkedData = async () => {
         try {
           const supabase = createClient();
-          const { data, error } = await supabase
-            .from("shepherding_visit_members")
-            .select("member_id")
-            .eq("visit_id", initialData.id);
+          const [membersRes, reportRes] = await Promise.all([
+            supabase
+              .from("shepherding_visit_members")
+              .select("member_id")
+              .eq("visit_id", initialData.id),
+            supabase
+              .from("shepherding_reports")
+              .select("report")
+              .eq("visit_id", initialData.id)
+              .maybeSingle(),
+          ]);
 
-          if (!error && data && isMounted) {
-            const ids = data.map((d: { member_id: string }) => d.member_id);
-            setSelectedMemberIds(ids);
+          if (isMounted) {
+            if (!membersRes.error && membersRes.data) {
+              const ids = membersRes.data.map((d: { member_id: string }) => d.member_id);
+              setSelectedMemberIds(ids);
+            }
+            if (!reportRes.error && reportRes.data?.report) {
+              setValue("report", reportRes.data.report);
+            }
           }
         } catch {
           // Mantém se já tiver
         }
       };
 
-      loadLinkedMembers();
+      loadLinkedData();
 
       return () => {
         isMounted = false;
@@ -255,7 +267,6 @@ export function PastoreioFormSheet({
       visit_date: data.visit_date,
       companion: data.companion?.trim() || null,
       next_visit_date: data.next_visit_date || null,
-      report: data.report?.trim() || null,
       companion_member_id: selectedCompanionId || null,
       member_id: null, // Legado: não gravamos mais
     };
@@ -271,7 +282,7 @@ export function PastoreioFormSheet({
             updated_at: new Date().toISOString(),
           })
           .eq("id", visitIdToUpdate)
-          .select()
+          .select("id, user_id, family_or_person, visit_date, companion, next_visit_date, companion_member_id, other_people, created_by_member_id, created_by_name, created_at, updated_at")
           .single();
 
         if (error) throw error;
@@ -283,12 +294,30 @@ export function PastoreioFormSheet({
             user_id: userId,
             ...payload,
           })
-          .select()
+          .select("id, user_id, family_or_person, visit_date, companion, next_visit_date, companion_member_id, other_people, created_by_member_id, created_by_name, created_at, updated_at")
           .single();
 
         if (error) throw error;
         savedVisit = created as ShepherdingVisit;
         setSavedVisitId(savedVisit.id);
+      }
+
+      // Salvar texto confidencial do relatório na tabela dedicada shepherding_reports
+      const reportText = data.report?.trim() || "";
+      if (reportText) {
+        await supabase
+          .from("shepherding_reports")
+          .upsert({
+            visit_id: savedVisit.id,
+            user_id: userId,
+            report: reportText,
+            updated_at: new Date().toISOString(),
+          });
+      } else if (visitIdToUpdate) {
+        await supabase
+          .from("shepherding_reports")
+          .delete()
+          .eq("visit_id", savedVisit.id);
       }
 
       // Sync members via RPC set_visit_members
@@ -307,6 +336,7 @@ export function PastoreioFormSheet({
       toast.success(initialData ? "Visita atualizada" : "Visita de pastoreio registrada");
       onSaved({
         ...savedVisit,
+        report: reportText,
         member_ids: selectedMemberIds,
       });
       onClose();

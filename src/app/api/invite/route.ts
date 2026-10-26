@@ -1,7 +1,18 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import crypto from "crypto";
+
+export const dynamic = "force-dynamic";
+
+const postSchema = z.object({
+  memberId: z.string().uuid("Identificador do membro inválido."),
+});
+
+const deleteSchema = z.object({
+  inviteId: z.string().uuid("Identificador do convite inválido."),
+});
 
 // Helper to verify caller is admin or elder
 async function verifyAdminOrElder() {
@@ -18,7 +29,7 @@ async function verifyAdminOrElder() {
     .from("profiles")
     .select("is_admin, is_elder")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
   if (!profile?.is_admin && !profile?.is_elder) {
     return { error: "Acesso negado", status: 403 };
@@ -33,7 +44,7 @@ async function verifyAdminOrElder() {
 }
 
 // 1. POST /api/invite — Gerar convite para um memberId
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const auth = await verifyAdminOrElder();
     if ("error" in auth) {
@@ -41,15 +52,16 @@ export async function POST(req: Request) {
     }
     const { user, supabaseAdmin } = auth;
 
-    const body = await req.json();
-    const { memberId, origin } = body;
-
-    if (!memberId || typeof memberId !== "string") {
+    const body = await req.json().catch(() => null);
+    const parsed = postSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Selecione um irmão da congregação para gerar o convite." },
+        { error: "Selecione um irmão da congregação válido para gerar o convite." },
         { status: 400 }
       );
     }
+
+    const { memberId } = parsed.data;
 
     // Verificar se o irmão existe em congregation_members
     const { data: member, error: memberErr } = await supabaseAdmin
@@ -107,24 +119,25 @@ export async function POST(req: Request) {
       });
 
     if (insertErr) {
-      console.error("Erro ao inserir convite:", insertErr);
+      console.error("Erro ao inserir convite no banco");
       return NextResponse.json(
         { error: "Falha ao gravar convite no banco de dados." },
         { status: 500 }
       );
     }
 
-    // Determinar a URL base da aplicação
-    const requestUrl = new URL(req.url);
-    const baseUrl = origin || requestUrl.origin;
+    // B2: Base URL estritamente derivada do servidor / NEXT_PUBLIC_SITE_URL
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || req.nextUrl.origin;
     const inviteUrl = `${baseUrl}/convite/${rawToken}`;
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       inviteUrl,
       expiresAt,
       memberName: member.full_name,
     });
-  } catch (error: any) {
+    res.headers.set("Cache-Control", "no-store");
+    return res;
+  } catch (error: unknown) {
     console.error("Erro em POST /api/invite:", error);
     return NextResponse.json(
       { error: "Erro interno ao processar convite." },
@@ -157,15 +170,17 @@ export async function GET() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Erro ao listar convites:", error);
+      console.error("Erro ao listar convites no banco");
       return NextResponse.json(
         { error: "Erro ao buscar convites pendentes." },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ invites: invites || [] });
-  } catch (error: any) {
+    const res = NextResponse.json({ invites: invites || [] });
+    res.headers.set("Cache-Control", "no-store");
+    return res;
+  } catch (error: unknown) {
     console.error("Erro em GET /api/invite:", error);
     return NextResponse.json(
       { error: "Erro interno ao carregar convites." },
@@ -183,15 +198,16 @@ export async function DELETE(req: Request) {
     }
     const { supabaseAdmin } = auth;
 
-    const body = await req.json();
-    const { inviteId } = body;
-
-    if (!inviteId || typeof inviteId !== "string") {
+    const body = await req.json().catch(() => null);
+    const parsed = deleteSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
         { error: "Identificador de convite inválido." },
         { status: 400 }
       );
     }
+
+    const { inviteId } = parsed.data;
 
     const { error } = await supabaseAdmin
       .from("member_invites")
@@ -200,15 +216,17 @@ export async function DELETE(req: Request) {
       .is("used_at", null);
 
     if (error) {
-      console.error("Erro ao revogar convite:", error);
+      console.error("Erro ao revogar convite no banco");
       return NextResponse.json(
         { error: "Erro ao revogar convite." },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
+    const res = NextResponse.json({ success: true });
+    res.headers.set("Cache-Control", "no-store");
+    return res;
+  } catch (error: unknown) {
     console.error("Erro em DELETE /api/invite:", error);
     return NextResponse.json(
       { error: "Erro interno ao revogar convite." },

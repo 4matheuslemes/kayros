@@ -64,6 +64,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Conteúdo ausente." }, { status: 400 });
   }
 
+  // M12: Limitar tamanho máximo de payload para evitar DoS por processamento de PDF
+  const contentStr = JSON.stringify(content);
+  if (contentStr.length > 300_000) {
+    return NextResponse.json(
+      { error: "O conteúdo do discurso excede o tamanho máximo permitido para exportação (300 KB)." },
+      { status: 413 }
+    );
+  }
+
   try {
     const blocks = buildBlocks(content.content, { includeBackstage: true });
     const texts = await fetchVerseTexts(supabase, collectVerseRefs(blocks));

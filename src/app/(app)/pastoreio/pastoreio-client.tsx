@@ -67,7 +67,7 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
       const [visitsRes, membersRes, visitMembersRes] = await Promise.all([
         supabase
           .from("shepherding_visits")
-          .select("*")
+          .select("id, user_id, family_or_person, visit_date, companion, next_visit_date, companion_member_id, other_people, created_by_member_id, created_by_name, created_at, updated_at")
           .order("visit_date", { ascending: false })
           .order("created_at", { ascending: false }),
         supabase

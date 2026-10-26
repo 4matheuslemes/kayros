@@ -45,6 +45,11 @@ export function SaveRecordSheet({
   const [saving, setSaving] = useState(false);
   const { register, handleSubmit } = useForm<FormData>({ resolver: zodResolver(schema) });
 
+  const finalMinutes = Math.max(1, durationMinutes || 1);
+  const h = Math.floor(finalMinutes / 60);
+  const m = finalMinutes % 60;
+  const durationDesc = h > 0 ? `${h}h ${m}m de pregação` : `${m}m de pregação`;
+
   const onSubmit = async (data: FormData) => {
     setSaving(true);
     const db = getDb();
@@ -53,7 +58,7 @@ export function SaveRecordSheet({
       id: uuidv4(),
       user_id: userId,
       date: defaultDate ?? format(new Date(), "yyyy-MM-dd"),
-      duration_minutes: durationMinutes,
+      duration_minutes: finalMinutes,
       category,
       source,
       notes: data.notes ?? "",
@@ -65,7 +70,7 @@ export function SaveRecordSheet({
     try {
       await db.daily_records.add(record);
       await enqueueSync("daily_records", record.id, "INSERT", record);
-      toast.success(`${Math.floor(durationMinutes / 60)}h ${durationMinutes % 60}m registrados`);
+      toast.success(`${h > 0 ? `${h}h ` : ""}${m}m registrados`);
       onSaved?.();
       onClose();
     } catch (err) {
@@ -81,7 +86,7 @@ export function SaveRecordSheet({
       open={open}
       onClose={onClose}
       title="Salvar registro"
-      description={`${Math.floor(durationMinutes / 60)}h ${durationMinutes % 60}m de pregação`}
+      description={durationDesc}
     >
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
         {/* Category chips */}

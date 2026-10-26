@@ -47,7 +47,7 @@ create trigger protect_privileged_profile_columns
   before insert or update on public.profiles
   for each row execute function public.protect_privileged_profile_columns();
 
--- 4) Liberar o módulo para a minha conta (Matheus Lemes)
+-- 4) Liberar o módulo para a conta inicial de testes (placeholder)
 update public.profiles
   set talks_access = true
-  where id = '4a2191da-8411-478f-a5a4-6c0747f6f89c';
+  where id = '00000000-0000-0000-0000-000000000000';

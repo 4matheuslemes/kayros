@@ -256,7 +256,7 @@ export function HoursRegistrationCard({
       <SaveRecordSheet
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
-        durationMinutes={elapsedMinutes}
+        durationMinutes={Math.max(1, elapsedMinutes || 1)}
         userId={userId}
         source="timer"
         onSaved={handleSaved}

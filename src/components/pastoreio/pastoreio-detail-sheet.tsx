@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Calendar, Users, CalendarClock, Pencil, Trash2, AlertTriangle, UserCheck, Shield } from "lucide-react";
 import { Drawer } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/lib/supabase/client";
 import type { ShepherdingVisit } from "@/lib/types/pastoreio";
 
 interface PastoreioDetailSheetProps {
@@ -31,13 +32,49 @@ export function PastoreioDetailSheet({
 }: PastoreioDetailSheetProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [report, setReport] = useState<string | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
+
+  const isAuthor = !currentUserId || visit?.user_id === currentUserId;
+
+  useEffect(() => {
+    if (!open || !visit || !isAuthor) {
+      setReport(null);
+      return;
+    }
+
+    let isMounted = true;
+    setReportLoading(true);
+    const fetchReport = async () => {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from("shepherding_reports")
+          .select("report")
+          .eq("visit_id", visit.id)
+          .maybeSingle();
+
+        if (isMounted) {
+          setReport(data?.report ?? null);
+        }
+      } catch {
+        if (isMounted) setReport(null);
+      } finally {
+        if (isMounted) setReportLoading(false);
+      }
+    };
+
+    fetchReport();
+    return () => {
+      isMounted = false;
+    };
+  }, [open, visit, isAuthor]);
 
   if (!visit) return null;
 
   const displayNames = visitedNames && visitedNames.length > 0 ? visitedNames : [visit.family_or_person];
   const drawerTitle = displayNames.join(", ");
   const displayCompanion = linkedCompanionName || visit.companion;
-  const isAuthor = !currentUserId || visit.user_id === currentUserId;
 
   const formattedDate = (() => {
     try {
@@ -137,9 +174,18 @@ export function PastoreioDetailSheet({
           <h4 className="text-caption font-semibold uppercase tracking-wider text-[var(--ink-muted)] px-1">
             Relatório da Visita
           </h4>
-          {visit.report ? (
+          {!isAuthor ? (
+            <div className="p-4 rounded-lg bg-[var(--background)]/70 border border-[var(--border)] text-caption text-[var(--ink-muted)] italic text-center flex items-center justify-center gap-2">
+              <Shield size={14} className="text-[var(--primary)] shrink-0" />
+              <span>Relatório confidencial (visível apenas para o autor que realizou a visita)</span>
+            </div>
+          ) : reportLoading ? (
+            <div className="p-4 rounded-lg bg-[var(--background)] border border-[var(--border)] text-caption text-[var(--ink-muted)] italic text-center">
+              Carregando relatório...
+            </div>
+          ) : report ? (
             <div className="p-4 rounded-lg bg-[var(--background)] border border-[var(--border)] text-body-sm text-[var(--ink)] whitespace-pre-wrap leading-relaxed select-text max-h-[300px] overflow-y-auto">
-              {visit.report}
+              {report}
             </div>
           ) : (
             <div className="p-4 rounded-lg bg-[var(--background)] border border-[var(--border)] text-caption text-[var(--ink-muted)] italic text-center">
@@ -188,7 +234,7 @@ export function PastoreioDetailSheet({
               className="flex-1"
               onClick={() => {
                 onClose();
-                onEdit(visit);
+                onEdit({ ...visit, report: report ?? undefined });
               }}
             >
               <Pencil size={15} className="mr-1.5 text-[var(--ink-muted)]" />

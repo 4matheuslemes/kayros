@@ -285,7 +285,7 @@ create policy "shepherding_visit_members: write only visit author"
     and exists (select 1 from public.shepherding_visits v where v.id = visit_id and v.user_id = auth.uid())
   );
 
--- 8) Configurar estado inicial das contas já existentes (vincular o dono da base ao registro is_self)
+-- 8) Configurar estado inicial das contas já existentes (placeholder neutro)
 update public.profiles p
    set member_id          = (select m.id from public.congregation_members m where m.is_self = true limit 1),
        is_admin           = true,
@@ -296,11 +296,11 @@ update public.profiles p
        view_members       = true,
        manage_members     = true,
        shepherding_access = true
- where p.id = '4a2191da-8411-478f-a5a4-6c0747f6f89c';
+ where p.id = '00000000-0000-0000-0000-000000000000';
 
 -- Para qualquer outra conta já existente que tinha meta configurada (como pioneiros atuais), manter hours_access = true
 update public.profiles
    set hours_access    = true,
        contacts_access = true
- where id <> '4a2191da-8411-478f-a5a4-6c0747f6f89c'
+ where id <> '00000000-0000-0000-0000-000000000000'
    and onboarding_completed = true;

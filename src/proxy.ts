@@ -39,6 +39,31 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
+  // Set secure HttpOnly cookie when visiting invite page
+  if (pathname.startsWith("/convite/")) {
+    const segments = pathname.split("/");
+    const token = segments[2];
+    if (token) {
+      supabaseResponse.cookies.set("kairos_invite_token", token.trim(), {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 600,
+      });
+    }
+  }
+
+  // Security headers for invite and auth routes
+  if (
+    pathname.startsWith("/convite") ||
+    pathname.startsWith("/api/invite") ||
+    pathname.startsWith("/auth/callback")
+  ) {
+    supabaseResponse.headers.set("Cache-Control", "no-store");
+    supabaseResponse.headers.set("Referrer-Policy", "no-referrer");
+  }
+
   // Public routes that don't need auth
   const publicPaths = [
     "/login",
@@ -64,12 +89,20 @@ export async function proxy(request: NextRequest) {
   if (user && !isPublic) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("onboarding_completed")
+      .select("member_id, is_admin, onboarding_completed")
       .eq("id", user.id)
-      .single();
+      .maybeSingle();
+
+    // A1 e M8: Autorizado somente se possui vínculo com irmão ou é administrador
+    const isAuthorized = !!profile?.member_id || !!profile?.is_admin;
+    if (!isAuthorized) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.searchParams.set("error", "invite_required");
+      return NextResponse.redirect(url);
+    }
 
     const isCompleted = profile?.onboarding_completed ?? false;
-
     if (!isCompleted && !pathname.startsWith("/onboarding")) {
       const url = request.nextUrl.clone();
       url.pathname = "/onboarding";

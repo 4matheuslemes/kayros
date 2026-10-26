@@ -65,17 +65,20 @@ export function OnboardingClient({
     setSaving(true);
     const supabase = createClient();
 
-    // Upsert into supabase
-    const { error } = await supabase.from("profiles").upsert({
-      id: userId,
-      full_name: data.full_name,
-      monthly_goal_hours: canUseHours ? data.monthly_goal_hours : 50,
-      working_days: canUseHours ? data.working_days : [1, 2, 3, 4, 5, 6, 7],
-      onboarding_completed: true,
+    // Complete onboarding via server API (using service_role to bypass client triggers)
+    const res = await fetch("/api/onboarding/complete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        full_name: data.full_name,
+        monthly_goal_hours: canUseHours ? data.monthly_goal_hours : 50,
+        working_days: canUseHours ? data.working_days : [1, 2, 3, 4, 5, 6, 7],
+      }),
     });
 
-    if (error) {
-      toast.error("Erro ao salvar. Tente novamente.");
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      toast.error(errData.error || "Erro ao salvar. Tente novamente.");
       setSaving(false);
       return;
     }

@@ -1,30 +1,54 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 
-export async function POST(req: Request) {
+export const dynamic = "force-dynamic";
+
+// In-memory rate limiting (max 10 attempts per 15 minutes per IP/token)
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+const MAX_ATTEMPTS = 10;
+
+function checkRateLimit(key: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(key);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= MAX_ATTEMPTS) {
+    return false;
+  }
+  entry.count++;
+  return true;
+}
+
+const acceptSchema = z.object({
+  token: z.string().min(10, "Token de convite inválido."),
+  email: z.string().email("Informe um endereço de e-mail válido."),
+  password: z.string().min(8, "A senha deve ter no mínimo 8 caracteres."),
+});
+
+export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { token, email, password } = body;
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown-ip";
 
-    if (!token || typeof token !== "string") {
+    const body = await req.json().catch(() => null);
+    const parsed = acceptSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Token de convite ausente ou inválido." },
+        { error: parsed.error.issues[0]?.message || "Dados de cadastro inválidos." },
         { status: 400 }
       );
     }
 
-    if (!email || typeof email !== "string" || !email.includes("@")) {
-      return NextResponse.json(
-        { error: "Informe um endereço de e-mail válido." },
-        { status: 400 }
-      );
-    }
+    const { token, email, password } = parsed.data;
 
-    if (!password || typeof password !== "string" || password.length < 6) {
+    if (!checkRateLimit(`ip:${ip}`) || !checkRateLimit(`token:${token.slice(0, 16)}`)) {
       return NextResponse.json(
-        { error: "A senha deve ter no mínimo 6 caracteres." },
-        { status: 400 }
+        { error: "Muitas tentativas. Aguarde 15 minutos e tente novamente." },
+        { status: 429 }
       );
     }
 
@@ -99,7 +123,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Criar o usuário no Supabase Auth já com e-mail confirmado (sem disparar e-mail do Supabase)
+    // Criar o usuário no Supabase Auth
     const { data: newUser, error: createError } =
       await supabaseAdmin.auth.admin.createUser({
         email: email.trim().toLowerCase(),
@@ -123,10 +147,14 @@ export async function POST(req: Request) {
           { status: 400 }
         );
       }
-      return NextResponse.json({ error: createError.message }, { status: 400 });
+      console.error("Erro ao criar usuário via invite accept");
+      return NextResponse.json(
+        { error: "Não foi possível cadastrar a conta. Verifique os dados informados." },
+        { status: 400 }
+      );
     }
 
-    // Marcar atomicamente o convite como utilizado
+    // Marcar atomicamente o convite como utilizado garantindo não expiração
     const { data: updatedInvite, error: updateError } = await supabaseAdmin
       .from("member_invites")
       .update({
@@ -135,14 +163,15 @@ export async function POST(req: Request) {
       })
       .eq("id", invite.id)
       .is("used_at", null)
+      .gt("expires_at", new Date().toISOString())
       .select("id")
       .maybeSingle();
 
     if (updateError || !updatedInvite) {
-      // Race condition de segurança: se outro processo utilizou neste ínterim, removemos o usuário criado
+      // Reverter usuário criado em caso de corrida
       await supabaseAdmin.auth.admin.deleteUser(newUser.user.id);
       return NextResponse.json(
-        { error: "Este convite já foi utilizado por outra sessão." },
+        { error: "Este convite já foi utilizado ou expirou." },
         { status: 400 }
       );
     }
@@ -150,20 +179,33 @@ export async function POST(req: Request) {
     const isPioneer = member.service_status === "pioneiro_regular";
 
     // Atualizar profile com o nome do irmão e vínculo
-    await supabaseAdmin.from("profiles").upsert({
+    const { error: upsertError } = await supabaseAdmin.from("profiles").upsert({
       id: newUser.user.id,
       full_name: member.full_name,
       member_id: invite.member_id,
       onboarding_completed: !isPioneer,
     });
 
+    if (upsertError) {
+      console.error("Erro ao gravar perfil vinculado:", upsertError.message);
+      await supabaseAdmin.auth.admin.deleteUser(newUser.user.id);
+      return NextResponse.json(
+        { error: "Falha ao vincular seu perfil à congregação." },
+        { status: 500 }
+      );
+    }
+
     // Aplicar permissões e designações automáticas
-    await supabaseAdmin.rpc("apply_member_default_permissions", {
+    const { error: rpcError } = await supabaseAdmin.rpc("apply_member_default_permissions", {
       p_user_id: newUser.user.id,
       p_member_id: invite.member_id,
     });
 
-    // Se não for pioneiro regular, garantir onboarding_completed = true para ir direto ao app
+    if (rpcError) {
+      console.error("Erro ao configurar permissões do membro:", rpcError.message);
+    }
+
+    // Se não for pioneiro regular, garantir onboarding_completed = true
     if (!isPioneer) {
       await supabaseAdmin
         .from("profiles")
@@ -171,11 +213,14 @@ export async function POST(req: Request) {
         .eq("id", newUser.user.id);
     }
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       success: true,
       memberName: member.full_name,
     });
-  } catch (error: any) {
+    res.headers.set("Cache-Control", "no-store");
+    res.headers.set("Referrer-Policy", "no-referrer");
+    return res;
+  } catch (error: unknown) {
     console.error("Erro em POST /api/invite/accept:", error);
     return NextResponse.json(
       { error: "Erro interno ao processar o aceite do convite." },

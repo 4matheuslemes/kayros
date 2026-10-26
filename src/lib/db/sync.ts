@@ -51,6 +51,26 @@ function classifySupabaseError(err: unknown): Classification {
   return { recoverable: true };
 }
 
+function extractErrorMessage(err: unknown): string {
+  if (!err) return "Erro desconhecido";
+  if (err instanceof Error) return err.message;
+  if (typeof err === "object") {
+    const e = err as Record<string, unknown>;
+    const parts: string[] = [];
+    if (e.message && typeof e.message === "string") parts.push(e.message);
+    if (e.details && typeof e.details === "string") parts.push(e.details);
+    if (e.hint && typeof e.hint === "string") parts.push(e.hint);
+    if (e.code) parts.push(`Code: ${e.code}`);
+    if (parts.length > 0) return parts.join(" — ");
+    try {
+      return JSON.stringify(err);
+    } catch {
+      return String(err);
+    }
+  }
+  return String(err);
+}
+
 // ─────────────────────────────────────────────────────────────
 // moveToPermanentErrors
 //
@@ -64,19 +84,23 @@ async function moveToPermanentErrors(
   err: unknown
 ): Promise<void> {
   const db = getDb();
+  const errorMessage = extractErrorMessage(err);
 
   const errorRecord: SyncError = {
     original_item: item,
     reason: classification.reason,
     http_status: classification.httpStatus,
-    error_message: err instanceof Error ? err.message : String(err),
+    error_message: errorMessage,
     failed_at: new Date().toISOString(),
   };
 
   await db.sync_errors.add(errorRecord);
   await db.sync_queue.delete(item.id!);
 
-  console.error("[sync] Permanent error — moved to sync_errors:", errorRecord);
+  console.error("[sync] Permanent error — moved to sync_errors:", {
+    ...errorRecord,
+    original_error: err,
+  });
 
   // Inform the user — data did not reach the server
   toast.error("Um registro não pôde ser sincronizado", {
@@ -116,6 +140,35 @@ export async function flushSyncQueue(): Promise<void> {
     return;
   }
 
+  // ── Auto-heal: Fix any previously failed daily_records stuck in sync_errors ──
+  try {
+    const failedItems = await db.sync_errors.toArray();
+    for (const errorRecord of failedItems) {
+      const orig = errorRecord.original_item;
+      if (orig && orig.table_name === "daily_records" && orig.payload) {
+        const mins = Number(orig.payload.duration_minutes);
+        if (isNaN(mins) || mins <= 0) {
+          // Fix duration to at least 1 minute in local Dexie and in payload
+          const fixedPayload = { ...orig.payload, duration_minutes: 1 };
+          await db.daily_records.update(orig.record_id, { duration_minutes: 1 }).catch(() => {});
+          await db.sync_queue.add({
+            table_name: orig.table_name,
+            record_id: orig.record_id,
+            operation: orig.operation,
+            payload: fixedPayload,
+            created_at: new Date().toISOString(),
+            attempts: 0,
+          });
+          if (errorRecord.id) {
+            await db.sync_errors.delete(errorRecord.id);
+          }
+        }
+      }
+    }
+  } catch (healErr) {
+    console.warn("[sync] Self-healing sync_errors failed:", healErr);
+  }
+
   const pending = await db.sync_queue.orderBy("created_at").toArray();
   if (pending.length === 0) return;
 
@@ -153,6 +206,7 @@ async function processSyncItem(
   supabase: ReturnType<typeof createClient>,
   item: SyncQueueItem
 ): Promise<void> {
+  const db = getDb();
   const { table_name, operation, payload, record_id } = item;
 
   switch (operation) {
@@ -160,6 +214,27 @@ async function processSyncItem(
     case "UPDATE": {
       const cleanPayload = { ...payload } as Record<string, unknown>;
       delete cleanPayload.synced; // Remove client-only flag before sending to Supabase
+
+      // Defensive fix for daily_records: duration_minutes must be > 0 (database check constraint)
+      if (table_name === "daily_records") {
+        const mins = Number(cleanPayload.duration_minutes);
+        if (isNaN(mins) || mins <= 0) {
+          cleanPayload.duration_minutes = 1;
+          void db.daily_records.update(record_id, { duration_minutes: 1 }).catch(() => {});
+        }
+      }
+
+      // Guard user_id: fallback to current logged-in user if missing
+      if (!cleanPayload.user_id) {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user?.id) {
+            cleanPayload.user_id = user.id;
+          }
+        } catch {
+          // ignore
+        }
+      }
 
       const { error } = await supabase
         .from(table_name)

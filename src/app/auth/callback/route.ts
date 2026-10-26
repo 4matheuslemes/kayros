@@ -35,17 +35,19 @@ export async function GET(request: NextRequest) {
   // 3. Consultar perfil do usuário no banco
   const { data: profile } = await supabaseAdmin
     .from("profiles")
-    .select("id, member_id, onboarding_completed, full_name")
+    .select("id, member_id, is_admin, onboarding_completed, full_name")
     .eq("id", user.id)
     .maybeSingle();
 
   // ─────────────────────────────────────────────────────────────
   // CASO A — Usuário já cadastrado e autorizado
-  // (já possui vínculo com member_id ou onboarding completado)
+  // (já possui vínculo com member_id ou é administrador)
   // ─────────────────────────────────────────────────────────────
-  if (profile?.member_id || profile?.onboarding_completed) {
+  if (profile?.member_id || profile?.is_admin) {
     const response = NextResponse.redirect(new URL("/", request.url));
     response.cookies.delete("kairos_invite_token");
+    response.headers.set("Cache-Control", "no-store");
+    response.headers.set("Referrer-Policy", "no-referrer");
     return response;
   }
 
@@ -74,7 +76,7 @@ export async function GET(request: NextRequest) {
       .maybeSingle();
 
     if (!inviteErr && invite) {
-      // Marcar atomicamente o convite como utilizado
+      // Marcar atomicamente o convite como utilizado (com checagem de expiração)
       const { data: updatedInvite } = await supabaseAdmin
         .from("member_invites")
         .update({
@@ -83,6 +85,7 @@ export async function GET(request: NextRequest) {
         })
         .eq("id", invite.id)
         .is("used_at", null)
+        .gt("expires_at", new Date().toISOString())
         .select("id")
         .maybeSingle();
 
@@ -94,18 +97,26 @@ export async function GET(request: NextRequest) {
         const isPioneer = member?.service_status === "pioneiro_regular";
 
         // Atualizar perfil com o nome do irmão e vincular ao member_id
-        await supabaseAdmin.from("profiles").upsert({
+        const { error: upsertErr } = await supabaseAdmin.from("profiles").upsert({
           id: user.id,
           full_name: member?.full_name || profile?.full_name || user.email?.split("@")[0],
           member_id: invite.member_id,
           onboarding_completed: !isPioneer,
         });
 
+        if (upsertErr) {
+          console.error("Erro ao vincular perfil após convite:", upsertErr.message);
+        }
+
         // Aplicar permissões e designações do irmão
-        await supabaseAdmin.rpc("apply_member_default_permissions", {
+        const { error: rpcErr } = await supabaseAdmin.rpc("apply_member_default_permissions", {
           p_user_id: user.id,
           p_member_id: invite.member_id,
         });
+
+        if (rpcErr) {
+          console.error("Erro ao aplicar permissões padrão:", rpcErr.message);
+        }
 
         // Se não for pioneiro regular, garante onboarding_completed = true
         if (!isPioneer) {
@@ -117,6 +128,8 @@ export async function GET(request: NextRequest) {
 
         const response = NextResponse.redirect(new URL("/", request.url));
         response.cookies.delete("kairos_invite_token");
+        response.headers.set("Cache-Control", "no-store");
+        response.headers.set("Referrer-Policy", "no-referrer");
         return response;
       }
     }
@@ -126,7 +139,16 @@ export async function GET(request: NextRequest) {
   // CASO C — Bloqueio de Segurança
   // (Tentou logar com Google na tela /login sem convite válido)
   // ─────────────────────────────────────────────────────────────
-  console.warn(`Tentativa de acesso não autorizado sem convite: ${user.email} (${user.id})`);
+  // Salvaguarda: nunca deletar contas que já tenham vínculo ou privilégio de admin
+  if (profile?.member_id || profile?.is_admin) {
+    const response = NextResponse.redirect(new URL("/", request.url));
+    response.cookies.delete("kairos_invite_token");
+    response.headers.set("Cache-Control", "no-store");
+    response.headers.set("Referrer-Policy", "no-referrer");
+    return response;
+  }
+
+  console.warn("Tentativa de acesso não autorizado via OAuth sem convite válido.");
 
   // Excluir imediatamente a conta recém-criada no Supabase Auth
   await supabaseAdmin.auth.admin.deleteUser(user.id);
@@ -136,5 +158,7 @@ export async function GET(request: NextRequest) {
 
   const response = NextResponse.redirect(new URL("/login?error=invite_required", request.url));
   response.cookies.delete("kairos_invite_token");
+  response.headers.set("Cache-Control", "no-store");
+  response.headers.set("Referrer-Policy", "no-referrer");
   return response;
 }
