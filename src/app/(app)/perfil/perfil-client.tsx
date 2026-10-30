@@ -14,6 +14,7 @@ import { Input, Field } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
 import { APP_NAME } from "@/lib/constants";
 import { getDb, type Profile } from "@/lib/db/dexie";
+import { secureSignOut } from "@/lib/auth/sign-out";
 import Link from "next/link";
 import { SecuritySettings } from "@/components/security/security-settings";
 import { calculateProjectedHours, ISO_DAY_TO_STRING } from "@/lib/goals/calculate-monthly-goal";
@@ -31,17 +32,17 @@ const DAYS_OF_WEEK = [
 ];
 
 const schema = z.object({
-  full_name:              z.string().min(1, "Nome obrigatório"),
-  congregation_name:      z.string().optional(),
-  monthly_goal_hours:     z.coerce.number().int().min(1).max(300),
-  working_days:           z.array(z.number()),
-  meeting_link:           z
+  full_name: z.string().min(1, "Nome obrigatório"),
+  congregation_name: z.string().optional(),
+  monthly_goal_hours: z.coerce.number().int().min(1).max(300),
+  working_days: z.array(z.number()),
+  meeting_link: z
     .string()
     .trim()
     .url("Insira o link completo (começando com http ou https), não apenas o número do ID")
     .or(z.literal(""))
     .optional(),
-  weekly_schedule:        z.record(z.string(), z.number()).optional(),
+  weekly_schedule: z.record(z.string(), z.number()).optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -63,12 +64,12 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
   const { register, handleSubmit, watch, setValue, reset, formState: { errors, isDirty } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      full_name:          profile.full_name,
-      congregation_name:  profile.congregation_name ?? "",
+      full_name: profile.full_name,
+      congregation_name: profile.congregation_name ?? "",
       monthly_goal_hours: profile.monthly_goal_hours ?? 50,
-      working_days:       profile.working_days ?? [1, 2, 3, 4, 5, 6, 7],
-      weekly_schedule:    profile.weekly_schedule ?? {},
-      meeting_link:       profile.meeting_link ?? "",
+      working_days: profile.working_days ?? [1, 2, 3, 4, 5, 6, 7],
+      weekly_schedule: profile.weekly_schedule ?? {},
+      meeting_link: profile.meeting_link ?? "",
     },
   });
 
@@ -78,7 +79,7 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
 
   const projectedHours = calculateProjectedHours(weeklySchedule, currentDays);
   const diff = projectedHours - goalHours;
-  const projectedText = diff >= 0 
+  const projectedText = diff >= 0
     ? `Seguindo essa agenda, você fará ${formatHours(projectedHours)} neste mês (Meta atingida!)`
     : `Seguindo essa agenda, você fará ${formatHours(projectedHours)} neste mês (Faltam ${formatHours(Math.abs(diff))} para sua meta de ${formatHours(goalHours)}).`;
   const projectedColor = diff >= 0 ? "text-[var(--success)]" : "text-[var(--accent)]";
@@ -87,14 +88,14 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
     setSaving(true);
     const supabase = createClient();
     const { error } = await supabase.from("profiles").upsert({
-      id:                  userId,
-      full_name:           data.full_name,
-      congregation_name:   data.congregation_name ?? null,
-      monthly_goal_hours:  data.monthly_goal_hours,
+      id: userId,
+      full_name: data.full_name,
+      congregation_name: data.congregation_name ?? null,
+      monthly_goal_hours: data.monthly_goal_hours,
       service_year_start_month: profile.service_year_start_month,
-      working_days:        data.working_days,
-      weekly_schedule:     data.weekly_schedule,
-      meeting_link:        data.meeting_link ?? null,
+      working_days: data.working_days,
+      weekly_schedule: data.weekly_schedule,
+      meeting_link: data.meeting_link ?? null,
     });
     if (error) {
       toast.error("Erro ao salvar. Tente novamente.");
@@ -118,24 +119,7 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
 
   const handleLogout = async () => {
     setLoggingOut(true);
-    try {
-      const db = getDb();
-      await db.delete();
-    } catch (e) {
-      console.warn("Erro ao limpar banco local Dexie:", e);
-    }
-    try {
-      if (typeof window !== "undefined" && "caches" in window) {
-        const cacheKeys = await caches.keys();
-        await Promise.all(cacheKeys.map((k) => caches.delete(k)));
-      }
-    } catch (e) {
-      console.warn("Erro ao limpar caches do Service Worker:", e);
-    }
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
-    router.refresh();
+    await secureSignOut();
   };
 
   return (
@@ -151,83 +135,83 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
           </div>
           <Card>
 
-          <div className="flex flex-col gap-5">
-          <Field label="Nome completo" htmlFor="profile-name" error={errors.full_name?.message} required>
-            <Input
-              id="profile-name"
-              placeholder="João da Silva"
-              error={!!errors.full_name}
-              disabled={editSection !== "personal"}
-              {...register("full_name")}
-            />
-          </Field>
+            <div className="flex flex-col gap-5">
+              <Field label="Nome completo" htmlFor="profile-name" error={errors.full_name?.message} required>
+                <Input
+                  id="profile-name"
+                  placeholder="João da Silva"
+                  error={!!errors.full_name}
+                  disabled={editSection !== "personal"}
+                  {...register("full_name")}
+                />
+              </Field>
 
-          <Field label="Congregação" htmlFor="profile-congregation" hint="Opcional">
-            <Input
-              id="profile-congregation"
-              placeholder="Congregação Central"
-              disabled={editSection !== "personal"}
-              {...register("congregation_name")}
-            />
-          </Field>
+              <Field label="Congregação" htmlFor="profile-congregation" hint="Opcional">
+                <Input
+                  id="profile-congregation"
+                  placeholder="Congregação Central"
+                  disabled={editSection !== "personal"}
+                  {...register("congregation_name")}
+                />
+              </Field>
 
-          <Field
-            label="Link da minha sala de reunião"
-            htmlFor="profile-meeting"
-            hint="Pegue no app do Zoom: Reuniões → Sala Pessoal → Copiar Convite"
-            error={errors.meeting_link?.message}
-          >
-            <Input
-              id="profile-meeting"
-              type="url"
-              placeholder="https://zoom.us/j/..."
-              error={!!errors.meeting_link}
-              disabled={editSection !== "personal"}
-              {...register("meeting_link")}
-            />
-          </Field>
-          </div>
-
-          <div className="pt-2 mt-2">
-            {editSection !== "personal" ? (
-              <Button
-                type="button"
-                variant="secondary"
-                className="w-full"
-                onClick={(e) => {
-                  e.preventDefault();
-                  reset();
-                  setEditSection("personal");
-                }}
+              <Field
+                label="Link da minha sala de reunião"
+                htmlFor="profile-meeting"
+                hint="Pegue no app do Zoom: Reuniões → Sala Pessoal → Copiar Convite"
+                error={errors.meeting_link?.message}
               >
-                Editar informações
-              </Button>
-            ) : (
-              <div className="flex gap-3">
+                <Input
+                  id="profile-meeting"
+                  type="url"
+                  placeholder="https://zoom.us/j/..."
+                  error={!!errors.meeting_link}
+                  disabled={editSection !== "personal"}
+                  {...register("meeting_link")}
+                />
+              </Field>
+            </div>
+
+            <div className="pt-2 mt-2">
+              {editSection !== "personal" ? (
                 <Button
                   type="button"
                   variant="secondary"
-                  className="flex-1"
-                  onClick={() => {
+                  className="w-full"
+                  onClick={(e) => {
+                    e.preventDefault();
                     reset();
-                    setEditSection(null);
+                    setEditSection("personal");
                   }}
                 >
-                  Cancelar
+                  Editar informações
                 </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  loading={saving && editSection === "personal"}
-                  disabled={!isDirty}
-                  className="flex-1"
-                >
-                  Salvar
-                </Button>
-              </div>
-            )}
-          </div>
-        </Card>
+              ) : (
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="flex-1"
+                    onClick={() => {
+                      reset();
+                      setEditSection(null);
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    loading={saving && editSection === "personal"}
+                    disabled={!isDirty}
+                    className="flex-1"
+                  >
+                    Salvar
+                  </Button>
+                </div>
+              )}
+            </div>
+          </Card>
         </div>
         {/* Schedule Card - Somente visível se canUseHours === true */}
         {canUseHours && (
@@ -238,151 +222,150 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
             </div>
             <Card>
 
-          <div className="flex flex-col gap-5">
-            <Field
-              label="Meta mensal de horas"
-              htmlFor="profile-goal"
-              error={errors.monthly_goal_hours?.message}
-              hint="Padrão: 50 horas"
-            >
-              <Input
-                id="profile-goal"
-                type="number"
-                inputMode="numeric"
-                min={1}
-                max={300}
-                error={!!errors.monthly_goal_hours}
-                disabled={editSection !== "schedule"}
-                {...register("monthly_goal_hours")}
-              />
-            </Field>
-
-            <div className="pt-2 flex flex-col gap-1.5">
-            <label className="text-label text-[var(--ink)]">
-              Programação
-            </label>
-            
-            <div className="flex flex-wrap justify-center gap-1.5">
-              {DAYS_OF_WEEK.map((day) => {
-                const isSelected = currentDays.includes(day.id);
-                return (
-                  <button
-                    key={day.id}
-                    type="button"
+              <div className="flex flex-col gap-5">
+                <Field
+                  label="Meta mensal de horas"
+                  htmlFor="profile-goal"
+                  error={errors.monthly_goal_hours?.message}
+                  hint="Padrão: 50 horas"
+                >
+                  <Input
+                    id="profile-goal"
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={300}
+                    error={!!errors.monthly_goal_hours}
                     disabled={editSection !== "schedule"}
-                    onClick={() => {
-                      if (isSelected) {
-                        if (currentDays.length > 1) {
-                          setValue("working_days", currentDays.filter(d => d !== day.id), { shouldValidate: true, shouldDirty: true });
-                        } else {
-                          toast.error("Selecione ao menos um dia.");
-                        }
-                      } else {
-                        setValue("working_days", [...currentDays, day.id].sort(), { shouldValidate: true, shouldDirty: true });
-                        // Set default hours when enabling
-                        const key = ISO_DAY_TO_STRING[day.id];
-                        setValue(`weekly_schedule.${key}`, 120, { shouldDirty: true });
-                      }
-                    }}
-                    className={`w-9 h-9 sm:w-10 sm:h-10 flex-shrink-0 flex items-center justify-center rounded-full text-[11px] font-sans font-semibold transition-all ${
-                      isSelected
-                        ? "bg-[var(--primary)] text-white shadow-sm"
-                        : "bg-[var(--surface)] border border-[var(--border)] text-[var(--ink-muted)] hover:bg-[var(--background)]"
-                    } ${editSection !== "schedule" && isSelected ? "opacity-80" : ""} disabled:opacity-60 disabled:cursor-not-allowed`}
-                  >
-                    {day.label}
-                  </button>
-                );
-              })}
-            </div>
+                    {...register("monthly_goal_hours")}
+                  />
+                </Field>
 
-            {currentDays.length > 0 && (
-              <div className="mt-4 flex flex-col gap-3">
-                {currentDays.map(dayId => {
-                  const day = DAYS_OF_WEEK.find(d => d.id === dayId)!;
-                  const key = ISO_DAY_TO_STRING[dayId];
-                  const currentMins = weeklySchedule[key] ?? 120;
-                  
-                  return (
-                    <div key={dayId} className="flex items-center justify-between bg-[var(--surface)] p-3 rounded-lg border border-[var(--border)]">
-                      <span className="text-body-sm font-semibold">{day.label}</span>
-                      <div className="flex items-center gap-3">
-                        <Button 
-                          type="button" 
-                          variant="secondary" 
-                          size="icon" 
-                          className="w-8 h-8 rounded-full"
-                          disabled={editSection !== "schedule" || currentMins <= 30}
-                          onClick={() => setValue(`weekly_schedule.${key}`, Math.max(0, currentMins - 30), { shouldDirty: true })}
-                        >
-                          -
-                        </Button>
-                        <span className="font-display font-medium w-24 text-center text-[var(--ink)] whitespace-nowrap">
-                          {formatHours(currentMins / 60)}
-                        </span>
-                        <Button 
-                          type="button" 
-                          variant="secondary" 
-                          size="icon" 
-                          className="w-8 h-8 rounded-full"
+                <div className="pt-2 flex flex-col gap-1.5">
+                  <label className="text-label text-[var(--ink)]">
+                    Programação
+                  </label>
+
+                  <div className="flex flex-wrap justify-center gap-1.5">
+                    {DAYS_OF_WEEK.map((day) => {
+                      const isSelected = currentDays.includes(day.id);
+                      return (
+                        <button
+                          key={day.id}
+                          type="button"
                           disabled={editSection !== "schedule"}
-                          onClick={() => setValue(`weekly_schedule.${key}`, currentMins + 30, { shouldDirty: true })}
+                          onClick={() => {
+                            if (isSelected) {
+                              if (currentDays.length > 1) {
+                                setValue("working_days", currentDays.filter(d => d !== day.id), { shouldValidate: true, shouldDirty: true });
+                              } else {
+                                toast.error("Selecione ao menos um dia.");
+                              }
+                            } else {
+                              setValue("working_days", [...currentDays, day.id].sort(), { shouldValidate: true, shouldDirty: true });
+                              // Set default hours when enabling
+                              const key = ISO_DAY_TO_STRING[day.id];
+                              setValue(`weekly_schedule.${key}`, 120, { shouldDirty: true });
+                            }
+                          }}
+                          className={`w-9 h-9 sm:w-10 sm:h-10 flex-shrink-0 flex items-center justify-center rounded-full text-[11px] font-sans font-semibold transition-all ${isSelected
+                              ? "bg-[var(--primary)] text-white shadow-sm"
+                              : "bg-[var(--surface)] border border-[var(--border)] text-[var(--ink-muted)] hover:bg-[var(--background)]"
+                            } ${editSection !== "schedule" && isSelected ? "opacity-80" : ""} disabled:opacity-60 disabled:cursor-not-allowed`}
                         >
-                          +
-                        </Button>
-                      </div>
+                          {day.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {currentDays.length > 0 && (
+                    <div className="mt-4 flex flex-col gap-3">
+                      {currentDays.map(dayId => {
+                        const day = DAYS_OF_WEEK.find(d => d.id === dayId)!;
+                        const key = ISO_DAY_TO_STRING[dayId];
+                        const currentMins = weeklySchedule[key] ?? 120;
+
+                        return (
+                          <div key={dayId} className="flex items-center justify-between bg-[var(--surface)] p-3 rounded-lg border border-[var(--border)]">
+                            <span className="text-body-sm font-semibold">{day.label}</span>
+                            <div className="flex items-center gap-3">
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="icon"
+                                className="w-8 h-8 rounded-full"
+                                disabled={editSection !== "schedule" || currentMins <= 30}
+                                onClick={() => setValue(`weekly_schedule.${key}`, Math.max(0, currentMins - 30), { shouldDirty: true })}
+                              >
+                                -
+                              </Button>
+                              <span className="font-display font-medium w-24 text-center text-[var(--ink)] whitespace-nowrap">
+                                {formatHours(currentMins / 60)}
+                              </span>
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="icon"
+                                className="w-8 h-8 rounded-full"
+                                disabled={editSection !== "schedule"}
+                                onClick={() => setValue(`weekly_schedule.${key}`, currentMins + 30, { shouldDirty: true })}
+                              >
+                                +
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
+                  )}
+
+                  <p className={`text-sm mt-3 p-3 rounded-md bg-[var(--surface)] font-medium text-center ${projectedColor}`}>
+                    {projectedText}
+                  </p>
+                </div>
               </div>
-            )}
-            
-            <p className={`text-sm mt-3 p-3 rounded-md bg-[var(--surface)] font-medium text-center ${projectedColor}`}>
-              {projectedText}
-            </p>
-          </div>
-          </div>
-          <div className="pt-2 mt-2">
-            {editSection !== "schedule" ? (
-              <Button
-                type="button"
-                variant="secondary"
-                className="w-full"
-                onClick={(e) => {
-                  e.preventDefault();
-                  reset();
-                  setEditSection("schedule");
-                }}
-              >
-                Editar programação
-              </Button>
-            ) : (
-              <div className="flex gap-3">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="flex-1"
-                  onClick={() => {
-                    reset();
-                    setEditSection(null);
-                  }}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  loading={saving && editSection === "schedule"}
-                  disabled={!isDirty}
-                  className="flex-1"
-                >
-                  Salvar
-                </Button>
+              <div className="pt-2 mt-2">
+                {editSection !== "schedule" ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="w-full"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      reset();
+                      setEditSection("schedule");
+                    }}
+                  >
+                    Editar programação
+                  </Button>
+                ) : (
+                  <div className="flex gap-3">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="flex-1"
+                      onClick={() => {
+                        reset();
+                        setEditSection(null);
+                      }}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      loading={saving && editSection === "schedule"}
+                      disabled={!isDirty}
+                      className="flex-1"
+                    >
+                      Salvar
+                    </Button>
+                  </div>
+                )}
               </div>
-            )}
+            </Card>
           </div>
-        </Card>
-        </div>
         )}
       </form>
 
@@ -394,57 +377,57 @@ export function PerfilClient({ userId, email, profile }: PerfilClientProps) {
         </div>
         <Card padding="none" className="overflow-hidden">
           <div className="flex flex-col">
-          <SecuritySettings />
-          {canUseHours && (
-            <Link
-              href="/relatorio"
-              className="flex items-center gap-3 px-5 py-4 hover:bg-[var(--background)] transition-colors text-body-sm text-[var(--ink)]"
-            >
-              <FileText size={16} className="text-[var(--ink-muted)]" />
-              <div className="text-left">
-                <span className="text-body-sm text-[var(--ink)] block leading-tight">Relatório do mês</span>
-                <span className="text-caption text-[var(--ink-muted)] mt-0.5 block">Resumo para enviar</span>
-              </div>
-            </Link>
-          )}
-          {canUseShepherding && (
-            <Link
-              href="/pastoreio"
-              className="flex items-center gap-3 px-5 py-4 hover:bg-[var(--background)] transition-colors text-body-sm text-[var(--ink)]"
-            >
-              <HeartHandshake size={16} className="text-[var(--primary)]" />
-              <div className="text-left">
-                <span className="text-body-sm font-medium text-[var(--ink)] block leading-tight">Registro de Pastoreio</span>
-                <span className="text-caption text-[var(--ink-muted)] mt-0.5 block">Visitas pastorais confidenciais</span>
-              </div>
-            </Link>
-          )}
-          {canViewMembers && (
-            <Link
-              href="/irmaos"
-              className="flex items-center gap-3 px-5 py-4 hover:bg-[var(--background)] transition-colors text-body-sm text-[var(--ink)]"
-            >
-              <Users size={16} className="text-[var(--primary)]" />
-              <div className="text-left">
-                <span className="text-body-sm font-medium text-[var(--ink)] block leading-tight">Irmãos e Grupos</span>
-                <span className="text-caption text-[var(--ink-muted)] mt-0.5 block">Lista congregacional e grupos de serviço</span>
-              </div>
-            </Link>
-          )}
-          {isElderOrAdmin && (
-            <Link
-              href="/convidar"
-              className="flex items-center gap-3 px-5 py-4 hover:bg-[var(--background)] transition-colors text-body-sm text-[var(--ink)]"
-            >
-              <User size={16} className="text-[var(--ink-muted)]" />
-              <div className="text-left">
-                <span className="text-body-sm text-[var(--ink)] block leading-tight">Permissões e Convites</span>
-                <span className="text-caption text-[var(--ink-muted)] mt-0.5 block">Gerenciar acessos da congregação</span>
-              </div>
-            </Link>
-          )}
-        </div>
-      </Card>
+            <SecuritySettings />
+            {canUseHours && (
+              <Link
+                href="/relatorio"
+                className="flex items-center gap-3 px-5 py-4 hover:bg-[var(--background)] transition-colors text-body-sm text-[var(--ink)]"
+              >
+                <FileText size={16} className="text-[var(--ink-muted)]" />
+                <div className="text-left">
+                  <span className="text-body-sm text-[var(--ink)] block leading-tight">Relatório do mês</span>
+                  <span className="text-caption text-[var(--ink-muted)] mt-0.5 block">Resumo para enviar</span>
+                </div>
+              </Link>
+            )}
+            {canUseShepherding && (
+              <Link
+                href="/pastoreio"
+                className="flex items-center gap-3 px-5 py-4 hover:bg-[var(--background)] transition-colors text-body-sm text-[var(--ink)]"
+              >
+                <HeartHandshake size={16} className="text-[var(--primary)]" />
+                <div className="text-left">
+                  <span className="text-body-sm font-medium text-[var(--ink)] block leading-tight">Registro de Pastoreio</span>
+                  <span className="text-caption text-[var(--ink-muted)] mt-0.5 block">Visitas pastorais confidenciais</span>
+                </div>
+              </Link>
+            )}
+            {canViewMembers && (
+              <Link
+                href="/irmaos"
+                className="flex items-center gap-3 px-5 py-4 hover:bg-[var(--background)] transition-colors text-body-sm text-[var(--ink)]"
+              >
+                <Users size={16} className="text-[var(--primary)]" />
+                <div className="text-left">
+                  <span className="text-body-sm font-medium text-[var(--ink)] block leading-tight">Irmãos e Grupos</span>
+                  <span className="text-caption text-[var(--ink-muted)] mt-0.5 block">Lista congregacional e grupos de serviço</span>
+                </div>
+              </Link>
+            )}
+            {isElderOrAdmin && (
+              <Link
+                href="/convidar"
+                className="flex items-center gap-3 px-5 py-4 hover:bg-[var(--background)] transition-colors text-body-sm text-[var(--ink)]"
+              >
+                <User size={16} className="text-[var(--ink-muted)]" />
+                <div className="text-left">
+                  <span className="text-body-sm text-[var(--ink)] block leading-tight">Permissões e Convites</span>
+                  <span className="text-caption text-[var(--ink-muted)] mt-0.5 block">Gerenciar acessos da congregação</span>
+                </div>
+              </Link>
+            )}
+          </div>
+        </Card>
       </div>
 
       {/* App info */}

@@ -131,10 +131,10 @@ export default async function DashboardPage() {
       dueMembers,
       latestVisit: latestVisitRes.data
         ? {
-            family_or_person: latestVisitRes.data.family_or_person,
-            visit_date: latestVisitRes.data.visit_date,
-            created_by_name: latestVisitRes.data.created_by_name,
-          }
+          family_or_person: latestVisitRes.data.family_or_person,
+          visit_date: latestVisitRes.data.visit_date,
+          created_by_name: latestVisitRes.data.created_by_name,
+        }
         : null,
     };
   } else if (permissions.canViewMembers) {

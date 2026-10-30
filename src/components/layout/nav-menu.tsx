@@ -4,7 +4,8 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { X, Sun, Moon, Laptop, CloudCheck, CloudAlert } from "lucide-react";
+import { X, Sun, Moon, Laptop, CloudCheck, CloudAlert, LogOut } from "lucide-react";
+import { secureSignOut } from "@/lib/auth/sign-out";
 import { cn } from "@/lib/utils";
 import { lightTap } from "@/lib/haptics";
 import { useUserPermissions } from "@/contexts/user-permissions-context";
@@ -59,6 +60,14 @@ export function NavMenu({ fullName }: NavMenuProps = {}) {
       }
     });
   }, [fullName]);
+
+  const [signingOut, setSigningOut] = useState(false);
+  const handleSignOut = async () => {
+    if (signingOut) return;
+    lightTap();
+    setSigningOut(true);
+    await secureSignOut();
+  };
 
   const activeName = displayName || fullName || "";
   const initial = (activeName.trim()?.[0] || "K").toUpperCase();
@@ -399,6 +408,18 @@ export function NavMenu({ fullName }: NavMenuProps = {}) {
                 );
               })}
             </nav>
+
+            <div className="border-t border-[var(--border)] my-2 pt-2">
+              <button
+                type="button"
+                onClick={handleSignOut}
+                disabled={signingOut}
+                className="w-full flex items-center justify-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 active:bg-red-50 dark:active:bg-red-950/30 transition-colors disabled:opacity-60"
+              >
+                <LogOut size={18} />
+                {signingOut ? "Saindo..." : "Sair da conta"}
+              </button>
+            </div>
           </div>
         </div>,
         document.body

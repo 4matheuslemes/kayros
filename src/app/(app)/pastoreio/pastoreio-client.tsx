@@ -340,76 +340,76 @@ export function PastoreioClient({ userId }: PastoreioClientProps) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {filteredVisits.map((visit) => {
-            const visitedNames = getVisitedNames(visit);
-            const displayTitle = formatVisitedSummary(visitedNames);
+              const visitedNames = getVisitedNames(visit);
+              const displayTitle = formatVisitedSummary(visitedNames);
 
-            const formattedDate = (() => {
-              try {
-                return format(parseISO(visit.visit_date), "dd 'de' MMMM, yyyy", { locale: ptBR });
-              } catch {
-                return visit.visit_date;
-              }
-            })();
+              const formattedDate = (() => {
+                try {
+                  return format(parseISO(visit.visit_date), "dd 'de' MMMM, yyyy", { locale: ptBR });
+                } catch {
+                  return visit.visit_date;
+                }
+              })();
 
-            const formattedNext = (() => {
-              if (!visit.next_visit_date) return null;
-              try {
-                return format(parseISO(visit.next_visit_date), "dd/MM/yyyy");
-              } catch {
-                return visit.next_visit_date;
-              }
-            })();
+              const formattedNext = (() => {
+                if (!visit.next_visit_date) return null;
+                try {
+                  return format(parseISO(visit.next_visit_date), "dd/MM/yyyy");
+                } catch {
+                  return visit.next_visit_date;
+                }
+              })();
 
-            const isNextDue = Boolean(
-              visit.next_visit_date && visit.next_visit_date.slice(0, 10) <= today
-            );
+              const isNextDue = Boolean(
+                visit.next_visit_date && visit.next_visit_date.slice(0, 10) <= today
+              );
 
-            const companionDisplayName = visit.companion_member_id
-              ? membersMap.get(visit.companion_member_id) || visit.companion
-              : visit.companion;
+              const companionDisplayName = visit.companion_member_id
+                ? membersMap.get(visit.companion_member_id) || visit.companion
+                : visit.companion;
 
-            return (
-              <button
-                key={visit.id}
-                type="button"
-                onClick={() => setDetailVisit(visit)}
-                className="w-full text-left bg-[var(--panel)] border-0 rounded-[24px] p-5 hover:bg-black/[0.03] dark:hover:bg-white/5 active:scale-[0.99] transition-all shadow-xs flex items-center justify-between gap-3 group cursor-pointer"
-              >
-                <div className="flex flex-col gap-1.5 min-w-0 flex-1">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <h3 className="font-display font-semibold text-base text-[var(--ink)] truncate group-hover:text-[var(--primary)] transition-colors">
-                      {displayTitle}
-                    </h3>
-                  </div>
-
-                  {/* Linha 2: Data da visita e autor */}
-                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-[var(--ink-muted)]">
-                    <Calendar size={13} className="shrink-0 text-[var(--ink-muted)]" />
-                    <span>{formattedDate}</span>
-                    <span>•</span>
-                    <span className="truncate">Realizada por: {visit.created_by_name || "Ancião"}</span>
-                  </div>
-
-                  {/* Linha 3: Acompanhante e Próxima visita em texto simples e discreto */}
-                  {(companionDisplayName || formattedNext) && (
-                    <div className="flex flex-wrap items-center gap-1.5 text-xs text-[var(--ink-muted)]">
-                      {companionDisplayName && (
-                        <span>Acompanhante: {companionDisplayName}</span>
-                      )}
-                      {companionDisplayName && formattedNext && (
-                        <span>•</span>
-                      )}
-                      {formattedNext && (
-                        <span className={isNextDue ? "text-[var(--accent)] font-medium" : undefined}>
-                          Próxima: {formattedNext}
-                        </span>
-                      )}
+              return (
+                <button
+                  key={visit.id}
+                  type="button"
+                  onClick={() => setDetailVisit(visit)}
+                  className="w-full text-left bg-[var(--panel)] border-0 rounded-[24px] p-5 hover:bg-black/[0.03] dark:hover:bg-white/5 active:scale-[0.99] transition-all shadow-xs flex items-center justify-between gap-3 group cursor-pointer"
+                >
+                  <div className="flex flex-col gap-1.5 min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <h3 className="font-display font-semibold text-base text-[var(--ink)] truncate group-hover:text-[var(--primary)] transition-colors">
+                        {displayTitle}
+                      </h3>
                     </div>
-                  )}
-                </div>
-              </button>
-            );
-          })}
+
+                    {/* Linha 2: Data da visita e autor */}
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs text-[var(--ink-muted)]">
+                      <Calendar size={13} className="shrink-0 text-[var(--ink-muted)]" />
+                      <span>{formattedDate}</span>
+                      <span>•</span>
+                      <span className="truncate">Realizada por: {visit.created_by_name || "Ancião"}</span>
+                    </div>
+
+                    {/* Linha 3: Acompanhante e Próxima visita em texto simples e discreto */}
+                    {(companionDisplayName || formattedNext) && (
+                      <div className="flex flex-wrap items-center gap-1.5 text-xs text-[var(--ink-muted)]">
+                        {companionDisplayName && (
+                          <span>Acompanhante: {companionDisplayName}</span>
+                        )}
+                        {companionDisplayName && formattedNext && (
+                          <span>•</span>
+                        )}
+                        {formattedNext && (
+                          <span className={isNextDue ? "text-[var(--accent)] font-medium" : undefined}>
+                            Próxima: {formattedNext}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}

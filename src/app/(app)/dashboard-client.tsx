@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   ArrowRight,
+  ChevronRight,
   Calendar,
   Users,
   Share2,
@@ -20,6 +21,7 @@ import { SyncStatusIndicator } from "@/components/layout/sync-status-indicator";
 
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { DailyEncouragement } from "@/components/dashboard/daily-encouragement";
+
 import { HoursRegistrationCard } from "@/components/dashboard/hours-registration-card";
 import { MonthlyGoalCard } from "@/components/dashboard/monthly-goal-card";
 import { AgendaCalendar } from "@/components/dashboard/agenda-calendar";
@@ -130,269 +132,34 @@ export function DashboardClient({
     (perms.canUseShepherding || perms.canViewMembers ? 1 : 0) +
     (perms.canUseContacts ? 1 : 0);
 
-  // Dynamic Scroll Statement (Ato 2)
+  // Frase editorial de resumo (Ato 2) — sem badges, ícones ou links
   const dueCount = pastoralData?.dueCount ?? 0;
-  const totalActive = pastoralData?.totalActive ?? 0;
-  const hasContacts = revisitas > 0 || estudosAtivos > 0;
 
-  const renderContactsPills = () => {
-    if (revisitas > 0 && estudosAtivos > 0) {
+  const accent = (text: string) => (
+    <span className="text-[var(--accent)] font-medium">{text}</span>
+  );
+
+  const statement = (() => {
+    const hasHours = perms.canUseHours && totalMinutes > 0;
+    const hasStudies = estudosAtivos > 0;
+    const studiesText = `${estudosAtivos} ${estudosAtivos === 1 ? "estudo bíblico" : "estudos bíblicos"}`;
+
+    if (hasHours && hasStudies) {
       return (
         <>
-          <span className="inline-flex items-center px-3.5 py-0.5 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] font-semibold text-[0.8em] align-middle mx-1">
-            {revisitas} {revisitas === 1 ? "revisita" : "revisitas"}
-          </span>{" "}
-          e{" "}
-          <span className="inline-flex items-center px-3.5 py-0.5 rounded-full bg-[var(--success)]/15 text-[var(--success)] font-semibold text-[0.8em] align-middle mx-1">
-            {estudosAtivos} {estudosAtivos === 1 ? "estudo ativo" : "estudos ativos"}
-          </span>
+          Neste mês, você dedicou {accent(hoursDoneFormatted)} ao ministério e conduz{" "}
+          {accent(studiesText)}.
         </>
       );
     }
-    if (revisitas > 0) {
-      return (
-        <span className="inline-flex items-center px-3.5 py-0.5 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] font-semibold text-[0.8em] align-middle mx-1">
-          {revisitas} {revisitas === 1 ? "revisita" : "revisitas"}
-        </span>
-      );
+    if (hasHours) {
+      return <>Neste mês, você dedicou {accent(hoursDoneFormatted)} ao ministério.</>;
     }
-    if (estudosAtivos > 0) {
-      return (
-        <span className="inline-flex items-center px-3.5 py-0.5 rounded-full bg-[var(--success)]/15 text-[var(--success)] font-semibold text-[0.8em] align-middle mx-1">
-          {estudosAtivos} {estudosAtivos === 1 ? "estudo ativo" : "estudos ativos"}
-        </span>
-      );
+    if (hasStudies) {
+      return <>Neste mês, você está conduzindo {accent(studiesText)}.</>;
     }
     return null;
-  };
-
-  const renderStatement = () => {
-    // ─────────────────────────────────────────────────────────────
-    // CASO A — Ancião / Autorizado em Pastoreio que NÃO é Pioneiro
-    // (!canUseHours && canUseShepherding)
-    // ─────────────────────────────────────────────────────────────
-    if (!perms.canUseHours && perms.canUseShepherding) {
-      return (
-        <>
-          {myGroupInfo ? (
-            <>
-              Você serve junto ao grupo{" "}
-              <span className="inline-flex items-center px-3.5 py-0.5 rounded-full bg-black/5 dark:bg-white/10 text-[var(--ink)] font-semibold text-[0.8em] align-middle mx-1">
-                {myGroupInfo.name}
-              </span>
-              {myGroupInfo.meeting_info ? ` (${myGroupInfo.meeting_info})` : ""}{" "}
-              e acompanha o cuidado pastoral da congregação com{" "}
-            </>
-          ) : (
-            <>Você acompanha o cuidado pastoral da congregação com </>
-          )}
-
-          {dueCount > 0 ? (
-            <span className="inline-flex items-center px-3.5 py-0.5 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 font-semibold text-[0.8em] align-middle mx-1">
-              {dueCount} {dueCount === 1 ? "irmão na hora de visitar" : "irmãos na hora de visitar"}
-            </span>
-          ) : (
-            <span className="inline-flex items-center px-3.5 py-0.5 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] font-semibold text-[0.8em] align-middle mx-1">
-              {totalActive > 0 ? `${totalActive} ${totalActive === 1 ? "irmão" : "irmãos"}` : "os irmãos"} nos grupos de serviço
-            </span>
-          )}
-
-          {hasContacts && (
-            <>
-              , e cuida de {renderContactsPills()} na sua agenda
-            </>
-          )}
-
-          <Link
-            href="/pastoreio"
-            className="inline-flex items-center justify-center w-10 h-10 lg:w-11 lg:h-11 rounded-full bg-[var(--primary)] text-white hover:opacity-90 active:scale-95 transition-all align-middle ml-2 shadow-sm"
-            aria-label="Ver pastoreio"
-            title="Ver pastoreio"
-          >
-            <ArrowRight size={18} strokeWidth={2.25} />
-          </Link>
-          .
-        </>
-      );
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    // CASO B — Pioneiro + Ancião
-    // (canUseHours && canUseShepherding)
-    // ─────────────────────────────────────────────────────────────
-    if (perms.canUseHours && perms.canUseShepherding) {
-      return (
-        <>
-          Você já dedicou{" "}
-          <span className="inline-flex items-center px-3.5 py-0.5 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] font-semibold text-[0.8em] align-middle mx-1">
-            {hoursDoneFormatted}
-          </span>{" "}
-          ao ministério neste mês
-          {hasContacts && <>, acompanha {renderContactsPills()}</>}
-          {myGroupInfo && (
-            <>
-              , faz parte do grupo{" "}
-              <span className="inline-flex items-center px-3.5 py-0.5 rounded-full bg-black/5 dark:bg-white/10 text-[var(--ink)] font-semibold text-[0.8em] align-middle mx-1">
-                {myGroupInfo.name}
-              </span>
-            </>
-          )}
-          {dueCount > 0 ? (
-            <>
-              , e cuida de{" "}
-              <span className="inline-flex items-center px-3.5 py-0.5 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 font-semibold text-[0.8em] align-middle mx-1">
-                {dueCount} {dueCount === 1 ? "irmão na hora de visitar" : "irmãos na hora de visitar"}
-              </span>{" "}
-              no pastoreio
-            </>
-          ) : (
-            <>
-              , e acompanha o cuidado pastoral com{" "}
-              <span className="inline-flex items-center px-3.5 py-0.5 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] font-semibold text-[0.8em] align-middle mx-1">
-                {totalActive > 0 ? `${totalActive} ${totalActive === 1 ? "irmão" : "irmãos"}` : "o rebanho"}
-              </span>{" "}
-              nos grupos
-            </>
-          )}
-          <Link
-            href="/pastoreio"
-            className="inline-flex items-center justify-center w-10 h-10 lg:w-11 lg:h-11 rounded-full bg-[var(--primary)] text-white hover:opacity-90 active:scale-95 transition-all align-middle ml-2 shadow-sm"
-            aria-label="Ver pastoreio"
-            title="Ver pastoreio"
-          >
-            <ArrowRight size={18} strokeWidth={2.25} />
-          </Link>
-          .
-        </>
-      );
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    // CASO C — Pioneiro Regular (não é ancião)
-    // (canUseHours && !canUseShepherding)
-    // ─────────────────────────────────────────────────────────────
-    if (perms.canUseHours && !perms.canUseShepherding) {
-      return (
-        <>
-          Você já dedicou{" "}
-          <span className="inline-flex items-center px-3.5 py-0.5 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] font-semibold text-[0.8em] align-middle mx-1">
-            {hoursDoneFormatted}
-          </span>{" "}
-          ao ministério neste mês
-          {hasContacts ? (
-            <>, acompanha {renderContactsPills()}</>
-          ) : goalCalc.hoursRemaining <= 0 ? (
-            <>
-              , com sua{" "}
-              <span className="inline-flex items-center px-3.5 py-0.5 rounded-full bg-[var(--success)]/15 text-[var(--success)] font-semibold text-[0.8em] align-middle mx-1">
-                meta concluída ✦
-              </span>
-            </>
-          ) : (
-            <>
-              , com{" "}
-              <span className="inline-flex items-center px-3.5 py-0.5 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] font-semibold text-[0.8em] align-middle mx-1">
-                {formatHours(goalCalc.hoursRemaining)} restantes
-              </span>{" "}
-              para concluir sua meta de {currentMonthName}
-            </>
-          )}
-          {myGroupInfo && (
-            <>
-              , e faz parte do grupo{" "}
-              <span className="inline-flex items-center px-3.5 py-0.5 rounded-full bg-black/5 dark:bg-white/10 text-[var(--ink)] font-semibold text-[0.8em] align-middle mx-1">
-                {myGroupInfo.name}
-              </span>
-            </>
-          )}
-          <Link
-            href="/historico"
-            className="inline-flex items-center justify-center w-10 h-10 lg:w-11 lg:h-11 rounded-full bg-[var(--primary)] text-white hover:opacity-90 active:scale-95 transition-all align-middle ml-2 shadow-sm"
-            aria-label="Ver histórico completo"
-            title="Ver histórico"
-          >
-            <ArrowRight size={18} strokeWidth={2.25} />
-          </Link>
-          .
-        </>
-      );
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    // CASO D — Publicador / Servo sem horas de pioneiro e sem pastoreio
-    // (!canUseHours && !canUseShepherding)
-    // ─────────────────────────────────────────────────────────────
-    if (hasContacts) {
-      return (
-        <>
-          Você acompanha {renderContactsPills()} na sua agenda
-          {myGroupInfo && (
-            <>
-              , e serve junto ao grupo{" "}
-              <span className="inline-flex items-center px-3.5 py-0.5 rounded-full bg-black/5 dark:bg-white/10 text-[var(--ink)] font-semibold text-[0.8em] align-middle mx-1">
-                {myGroupInfo.name}
-              </span>
-              {myGroupInfo.meeting_info ? ` (${myGroupInfo.meeting_info})` : ""}
-            </>
-          )}
-          <Link
-            href="/contatos"
-            className="inline-flex items-center justify-center w-10 h-10 lg:w-11 lg:h-11 rounded-full bg-[var(--primary)] text-white hover:opacity-90 active:scale-95 transition-all align-middle ml-2 shadow-sm"
-            aria-label="Ver interessados"
-            title="Ver interessados"
-          >
-            <ArrowRight size={18} strokeWidth={2.25} />
-          </Link>
-          .
-        </>
-      );
-    }
-
-    // Subcaso D2: 0 revisitas e 0 estudos — frase limpa e acolhedora sem zeros!
-    const defaultTargetHref = perms.canUseTalks
-      ? "/discursos"
-      : perms.canViewMembers
-        ? "/irmaos"
-        : "/contatos";
-
-    return (
-      <>
-        {myGroupInfo ? (
-          <>
-            Você serve junto ao grupo{" "}
-            <span className="inline-flex items-center px-3.5 py-0.5 rounded-full bg-black/5 dark:bg-white/10 text-[var(--ink)] font-semibold text-[0.8em] align-middle mx-1">
-              {myGroupInfo.name}
-            </span>
-            {myGroupInfo.meeting_info ? ` (${myGroupInfo.meeting_info})` : ""}{" "}
-            e tem este espaço pronto para organizar sua{" "}
-          </>
-        ) : (
-          <>Você tem este espaço pronto para organizar sua </>
-        )}
-        <span className="inline-flex items-center px-3.5 py-0.5 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] font-semibold text-[0.8em] align-middle mx-1">
-          agenda de ministério
-        </span>
-        {perms.canUseTalks && (
-          <>
-            {" "}
-            e seus{" "}
-            <span className="inline-flex items-center px-3.5 py-0.5 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] font-semibold text-[0.8em] align-middle mx-1">
-              esboços de discursos
-            </span>
-          </>
-        )}
-        <Link
-          href={defaultTargetHref}
-          className="inline-flex items-center justify-center w-10 h-10 lg:w-11 lg:h-11 rounded-full bg-[var(--primary)] text-white hover:opacity-90 active:scale-95 transition-all align-middle ml-2 shadow-sm"
-          aria-label="Acessar painel"
-          title="Acessar painel"
-        >
-          <ArrowRight size={18} strokeWidth={2.25} />
-        </Link>
-        .
-      </>
-    );
-  };
+  })();
 
   return (
     <div className="flex flex-col gap-12 lg:gap-20">
@@ -438,9 +205,14 @@ export function DashboardClient({
             >
               {greeting}, {firstName}
             </h1>
-            <div className="mt-3.5 max-w-xl mx-auto">
-              <DailyEncouragement className="text-center text-base lg:text-lg text-[var(--ink-muted)] leading-relaxed" />
-            </div>
+            {myGroupInfo?.name && (
+              <Link
+                href="/irmaos?view=grupos"
+                className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-[var(--primary)] hover:opacity-80 transition-opacity"
+              >
+                Meu grupo de serviço: {myGroupInfo.name} <ChevronRight size={14} />
+              </Link>
+            )}
           </div>
 
 
@@ -764,19 +536,18 @@ export function DashboardClient({
       {/* ─────────────────────────────────────────────────────────────
           ATO 2 — Frase de Destaque Gigante em Serifa (Scroll Statement)
       ───────────────────────────────────────────────────────────── */}
-      <Reveal delayMs={60}>
-        <section
-          className="max-w-4xl mx-auto py-12 lg:py-20 text-center px-4"
-          aria-label="Resumo dinâmico do ministério"
-        >
-          <p
-            className="font-display font-normal text-[var(--ink)] tracking-[-0.03em] leading-[1.25]"
-            style={{ fontSize: "clamp(1.85rem, 4.5vw, 3.25rem)" }}
+      {statement && (
+        <Reveal delayMs={60}>
+          <section
+            className="max-w-3xl mx-auto py-8 lg:py-14 text-center px-4"
+            aria-label="Resumo do ministério"
           >
-            {renderStatement()}
-          </p>
-        </section>
-      </Reveal>
+            <p className="font-display text-xl sm:text-2xl text-[var(--ink)] leading-snug">
+              {statement}
+            </p>
+          </section>
+        </Reveal>
+      )}
 
       {/* ─────────────────────────────────────────────────────────────
           ATO 3 — Blocos Editoriais Assimétricos
@@ -920,57 +691,29 @@ export function DashboardClient({
             {/* Esquerda: Cartão Visual 40px azul-marinho com textura radial e círculos de pessoas */}
             <div className="lg:col-span-6">
               <PastoralVisualCard
-                dueCount={pastoralData?.dueCount ?? 0}
-                dueMembers={pastoralData?.dueMembers}
-                groupName={myGroupInfo?.name}
+                lastVisitLabel={
+                  perms.canUseShepherding && pastoralData?.latestVisit
+                    ? `Última visita: ${pastoralData.latestVisit.family_or_person.split(" ")[0]} (${formatRelativeDate(pastoralData.latestVisit.visit_date)})`
+                    : undefined
+                }
               />
             </div>
 
             {/* Direita: APENAS TIPOGRAFIA PURA SOLTA NO FUNDO BRANCO */}
             <div className="lg:col-span-6 flex flex-col justify-center">
               <h2 className="text-2xl lg:text-3xl font-medium tracking-[-0.02em] font-sans text-[var(--ink)] leading-snug">
-                Cuidado pastoral e grupos de serviço.
+                {perms.canUseShepherding ? "Cuidado pastoral" : "Grupos de serviço"}
               </h2>
 
-              <p className="text-[var(--ink-muted)] text-base leading-relaxed mt-3">
-                {perms.canUseShepherding ? (
-                  <>
-                    <strong className="text-[var(--ink)] font-semibold">
-                      {pastoralData?.dueCount ?? 0}{" "}
-                      {pastoralData?.dueCount === 1 ? "irmão está" : "irmãos estão"}
-                    </strong>{" "}
-                    no momento oportuno para visita de pastoreio.
-                    {pastoralData?.latestVisit && (
-                      <>
-                        {" "}Última visita registrada para{" "}
-                        <strong className="text-[var(--ink)] font-medium">
-                          {pastoralData.latestVisit.family_or_person}
-                        </strong>{" "}
-                        em {formatRelativeDate(pastoralData.latestVisit.visit_date)}
-                        {pastoralData.latestVisit.created_by_name
-                          ? ` por ${pastoralData.latestVisit.created_by_name}`
-                          : ""}
-                        .
-                      </>
-                    )}
-                  </>
-                ) : null}
+              {perms.canUseShepherding && dueCount > 0 && (
+                <div className="mt-4">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 text-sm font-semibold">
+                    {dueCount} {dueCount === 1 ? "visita pendente" : "visitas pendentes"}
+                  </span>
+                </div>
+              )}
 
-                {myGroupInfo && (
-                  <>
-                    {" "}Seu grupo:{" "}
-                    <strong className="text-[var(--ink)] font-semibold">
-                      {myGroupInfo.sort_order}. {myGroupInfo.name}
-                    </strong>
-                    {myGroupInfo.overseer_name && ` • Superintendente: ${myGroupInfo.overseer_name}`}
-                    {myGroupInfo.assistant_name && ` • Ajudante: ${myGroupInfo.assistant_name}`}
-                    {myGroupInfo.meeting_info && ` • Saída: ${myGroupInfo.meeting_info}`}
-                    .
-                  </>
-                )}
-              </p>
-
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mt-6">
+              <div className="flex flex-col items-start gap-3 mt-6">
                 {perms.canUseShepherding && (
                   <Link
                     href="/pastoreio"

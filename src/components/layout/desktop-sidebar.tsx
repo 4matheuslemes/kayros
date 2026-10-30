@@ -17,7 +17,9 @@ import {
   Laptop,
   ChevronRight,
   Shield,
+  LogOut,
 } from "lucide-react";
+import { secureSignOut } from "@/lib/auth/sign-out";
 import { cn } from "@/lib/utils";
 import { lightTap } from "@/lib/haptics";
 import { useUserPermissions } from "@/contexts/user-permissions-context";
@@ -82,6 +84,13 @@ export function DesktopSidebar({ permissions: propPermissions }: DesktopSidebarP
       localStorage.setItem("kairos-theme", mode);
       document.documentElement.setAttribute("data-theme", mode);
     }
+  };
+
+  const [signingOut, setSigningOut] = useState(false);
+  const handleSignOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    await secureSignOut();
   };
 
   const initial = (displayName.trim()?.[0] || "K").toUpperCase();
@@ -377,10 +386,11 @@ export function DesktopSidebar({ permissions: propPermissions }: DesktopSidebarP
           </div>
         </div>
 
-        {/* Linha 2: Cartão Compacto do Usuário Logado */}
+        {/* Linha 2: Cartão Compacto do Usuário Logado + Sair */}
+        <div className="flex items-center gap-1">
         <Link
           href="/perfil"
-          className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-[var(--panel)]/70 transition-colors group"
+          className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-[var(--panel)]/70 transition-colors group min-w-0 flex-1"
         >
           <div className="w-[34px] h-[34px] rounded-full bg-[var(--panel)] border border-[var(--border)] text-[var(--ink)] font-display font-semibold text-sm flex items-center justify-center shrink-0 group-hover:border-[var(--primary)] transition-colors">
             {initial}
@@ -394,6 +404,17 @@ export function DesktopSidebar({ permissions: propPermissions }: DesktopSidebarP
             </span>
           </div>
         </Link>
+        <button
+          type="button"
+          onClick={handleSignOut}
+          disabled={signingOut}
+          title="Sair da conta"
+          aria-label="Sair da conta"
+          className="p-2 rounded-xl shrink-0 text-[var(--ink-muted)] hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer disabled:opacity-60"
+        >
+          <LogOut size={16} />
+        </button>
+        </div>
       </div>
     </aside>
   );
