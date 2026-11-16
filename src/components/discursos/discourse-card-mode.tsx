@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
+import { TaskList, TaskItem } from "@tiptap/extension-list";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BibleVerse } from "./bible-verse-node";
 import { BackstageMark } from "./backstage-mark";
-import type { DocSection } from "@/lib/discursos/outline-utils";
+import { uncheckAllTaskItems, type DocSection } from "@/lib/discursos/outline-utils";
 import { cn } from "@/lib/utils";
 
 interface CardSlideProps {
@@ -18,18 +19,32 @@ interface CardSlideProps {
   fontSize: number;
   onPrev: () => void;
   onNext: () => void;
+  onSectionNodesChange: (index: number, nodes: any[]) => void;
 }
 
 /**
  * Um cartão individual da seção.
  * Cria um editor Tiptap read-only com o conteúdo dos nós desta seção.
  */
-function CardSlide({ section, index, total, fontSize, onPrev, onNext }: CardSlideProps) {
+function CardSlide({
+  section,
+  index,
+  total,
+  fontSize,
+  onPrev,
+  onNext,
+  onSectionNodesChange,
+}: CardSlideProps) {
   const editor = useEditor({
     editable: false,
     extensions: [
       StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
       Underline,
+      TaskList,
+      TaskItem.configure({
+        nested: false,
+        onReadOnlyChecked: () => true,
+      }),
       BibleVerse,
       BackstageMark,
     ],
@@ -43,6 +58,38 @@ function CardSlide({ section, index, total, fontSize, onPrev, onNext }: CardSlid
       },
     },
   });
+
+  // Mantém `checked` nos nós da seção quando o usuário clica nos checkboxes em modo somente leitura
+  useEffect(() => {
+    if (!editor) return;
+    const dom = editor.view.dom;
+    const handleChange = (e: Event) => {
+      const target = e.target as HTMLElement | null;
+      if (target instanceof HTMLInputElement && target.type === "checkbox") {
+        try {
+          const pos = editor.view.posAtDOM(target, 0);
+          const $pos = editor.state.doc.resolve(pos);
+          for (let d = $pos.depth; d > 0; d--) {
+            const node = $pos.node(d);
+            if (node.type.name === "taskItem") {
+              const nodePos = $pos.before(d);
+              const tr = editor.state.tr.setNodeMarkup(nodePos, undefined, {
+                ...node.attrs,
+                checked: target.checked,
+              });
+              editor.view.dispatch(tr);
+              onSectionNodesChange(index, editor.getJSON().content ?? []);
+              break;
+            }
+          }
+        } catch {
+          // Ignora caso não encontre a posição no DOM
+        }
+      }
+    };
+    dom.addEventListener("change", handleChange);
+    return () => dom.removeEventListener("change", handleChange);
+  }, [editor, index, onSectionNodesChange]);
 
   return (
     <div className="discourse-card flex flex-col flex-1 max-w-[800px] w-full mx-auto px-4 md:px-6">
@@ -107,17 +154,41 @@ function CardSlide({ section, index, total, fontSize, onPrev, onNext }: CardSlid
 interface CardModeProps {
   sections: DocSection[];
   fontSize: number;
+  resetSignal?: number;
 }
 
 /**
  * Modo Cartão — gerencia o cartão atualmente visível, com suporte a botões e swipe.
  */
-export function CardMode({ sections, fontSize }: CardModeProps) {
+export function CardMode({ sections, fontSize, resetSignal = 0 }: CardModeProps) {
   const [current, setCurrent] = useState(0);
+  const [sessionSections, setSessionSections] = useState<DocSection[]>(sections);
+
+  // Quando `resetSignal` incrementa ("Limpar marcações"), desmarca todos os taskItems nas seções da sessão
+  useEffect(() => {
+    if (resetSignal === 0) return;
+    setSessionSections((prev) =>
+      prev.map((sec) => ({
+        ...sec,
+        nodes:
+          uncheckAllTaskItems({ type: "doc", content: sec.nodes }).content ?? [],
+      }))
+    );
+  }, [resetSignal]);
+
+  const handleSectionNodesChange = useCallback((idx: number, nodes: any[]) => {
+    setSessionSections((prev) => {
+      const next = [...prev];
+      if (next[idx]) {
+        next[idx] = { ...next[idx], nodes };
+      }
+      return next;
+    });
+  }, []);
 
   const goNext = useCallback(() => {
-    setCurrent((i) => Math.min(i + 1, sections.length - 1));
-  }, [sections.length]);
+    setCurrent((i) => Math.min(i + 1, sessionSections.length - 1));
+  }, [sessionSections.length]);
 
   const goPrev = useCallback(() => {
     setCurrent((i) => Math.max(i - 1, 0));
@@ -138,13 +209,14 @@ export function CardMode({ sections, fontSize }: CardModeProps) {
       }}
     >
       <CardSlide
-        key={current}
-        section={sections[current] ?? { heading: null, level: null, nodes: [] }}
+        key={`${current}-${resetSignal}`}
+        section={sessionSections[current] ?? { heading: null, level: null, nodes: [] }}
         index={current}
-        total={sections.length}
+        total={sessionSections.length}
         fontSize={fontSize}
         onPrev={goPrev}
         onNext={goNext}
+        onSectionNodesChange={handleSectionNodesChange}
       />
     </div>
   );

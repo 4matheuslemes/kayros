@@ -29,10 +29,16 @@ export interface ExportInline {
   verse?: VerseRef;
 }
 
+export interface ExportTaskItem {
+  checked: boolean;
+  blocks: ExportBlock[];
+}
+
 export type ExportBlock =
   | { type: "heading"; level: number; inlines: ExportInline[]; verses: VerseRef[] }
   | { type: "paragraph"; inlines: ExportInline[]; verses: VerseRef[] }
   | { type: "list"; ordered: boolean; start: number; items: ExportBlock[][] }
+  | { type: "taskList"; items: ExportTaskItem[] }
   | { type: "blockquote"; blocks: ExportBlock[] }
   | { type: "code"; text: string }
   | { type: "rule" };
@@ -128,6 +134,8 @@ export function buildBlocks(nodes: any[] | undefined, opts: BuildOptions): Expor
   const blocks: ExportBlock[] = [];
 
   for (const node of nodes ?? []) {
+    if (!node || typeof node !== "object") continue;
+
     switch (node.type) {
       case "heading": {
         const inlines = inlinesOf(node, opts);
@@ -153,9 +161,40 @@ export function buildBlocks(nodes: any[] | undefined, opts: BuildOptions): Expor
           type: "list",
           ordered: node.type === "orderedList",
           start: node.attrs?.start ?? 1,
-          items: (node.content ?? []).map((li: any) => buildBlocks(li.content, opts)),
+          items: (node.content ?? []).map((li: any) => buildBlocks(li?.content, opts)),
         });
         break;
+      case "taskList": {
+        const items: ExportTaskItem[] = (node.content ?? []).map((ti: any) => {
+          const itemBlocks = buildBlocks(ti?.content, opts);
+          if (itemBlocks.length === 0) {
+            const inlines = inlinesOf(ti, opts);
+            if (inlines.length > 0 && !inlines.every((i) => !i.text.trim())) {
+              itemBlocks.push({
+                type: "paragraph",
+                inlines,
+                verses: versesOf(inlines),
+              });
+            }
+          }
+          return {
+            checked: Boolean(ti?.attrs?.checked),
+            blocks: itemBlocks,
+          };
+        });
+        if (items.length > 0) {
+          blocks.push({ type: "taskList", items });
+        }
+        break;
+      }
+      case "taskItem": {
+        const itemBlocks = buildBlocks(node.content, opts);
+        blocks.push({
+          type: "taskList",
+          items: [{ checked: Boolean(node.attrs?.checked), blocks: itemBlocks }],
+        });
+        break;
+      }
       case "blockquote":
         blocks.push({ type: "blockquote", blocks: buildBlocks(node.content, opts) });
         break;
@@ -165,8 +204,21 @@ export function buildBlocks(nodes: any[] | undefined, opts: BuildOptions): Expor
       case "horizontalRule":
         blocks.push({ type: "rule" });
         break;
-      default:
-        if (Array.isArray(node.content)) blocks.push(...buildBlocks(node.content, opts));
+      default: {
+        // Fallback seguro para nós desconhecidos: tenta extrair blocos filhos ou texto inline
+        if (Array.isArray(node.content)) {
+          const subBlocks = buildBlocks(node.content, opts);
+          if (subBlocks.length > 0) {
+            blocks.push(...subBlocks);
+            break;
+          }
+        }
+        const inlines = inlinesOf(node, opts);
+        if (inlines.length > 0 && !inlines.every((i) => !i.text.trim())) {
+          blocks.push({ type: "paragraph", inlines, verses: versesOf(inlines) });
+        }
+        break;
+      }
     }
   }
 
@@ -186,6 +238,8 @@ export function collectVerseRefs(blocks: ExportBlock[]): VerseRef[] {
         b.verses.forEach((v) => map.set(v.key, v));
       } else if (b.type === "list") {
         b.items.forEach(walk);
+      } else if (b.type === "taskList") {
+        b.items.forEach((item) => walk(item.blocks));
       } else if (b.type === "blockquote") {
         walk(b.blocks);
       }
@@ -283,6 +337,18 @@ function renderBlocksText(
           const marker = b.ordered ? `${b.start + idx}. ` : "• ";
           const sub: string[] = [];
           renderBlocksText(item, texts, indent + "   ", sub);
+          if (sub.length === 0) return;
+          const first = sub.findIndex((l) => l.trim() !== "");
+          if (first === -1) return;
+          sub[first] = indent + marker + sub[first].slice(indent.length + 3);
+          out.push(...sub);
+        });
+        break;
+      case "taskList":
+        b.items.forEach((item) => {
+          const marker = item.checked ? "☑ " : "☐ ";
+          const sub: string[] = [];
+          renderBlocksText(item.blocks, texts, indent + "   ", sub);
           if (sub.length === 0) return;
           const first = sub.findIndex((l) => l.trim() !== "");
           if (first === -1) return;

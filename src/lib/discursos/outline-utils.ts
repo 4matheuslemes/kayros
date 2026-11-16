@@ -3,6 +3,7 @@ import type { JSONContent } from "@tiptap/core";
 export const OUTLINE_CATEGORIES = [
   "Discurso público",
   "Vida e Ministério",
+  "Presidente da reunião",
   "Estudo d'A Sentinela",
   "Estudo de congregação",
   "Discurso de batismo",
@@ -88,6 +89,38 @@ export interface DocSection {
   level: 1 | 2 | null;
   /** Nós ProseMirror desta seção (excluindo o próprio heading) */
   nodes: JSONContent[];
+}
+
+/**
+ * Retorna um novo documento Tiptap com todos os `taskItem` desmarcados (`checked: false`).
+ */
+export function uncheckAllTaskItems(doc: JSONContent | null | undefined): JSONContent {
+  if (!doc || typeof doc !== "object") return { type: "doc", content: [] };
+
+  const walk = (node: JSONContent): JSONContent => {
+    const next: JSONContent = { ...node };
+    if (node.type === "taskItem") {
+      next.attrs = { ...(node.attrs ?? {}), checked: false };
+    }
+    if (Array.isArray(node.content)) {
+      next.content = node.content.map(walk);
+    }
+    return next;
+  };
+
+  return walk(doc);
+}
+
+/**
+ * Verifica se o documento possui algum `taskItem`.
+ */
+export function hasTaskItems(doc: JSONContent | null | undefined): boolean {
+  if (!doc || typeof doc !== "object") return false;
+  if (doc.type === "taskItem") return true;
+  if (Array.isArray(doc.content)) {
+    return doc.content.some(hasTaskItems);
+  }
+  return false;
 }
 
 export function splitByHeadings(doc: JSONContent | null | undefined): DocSection[] {

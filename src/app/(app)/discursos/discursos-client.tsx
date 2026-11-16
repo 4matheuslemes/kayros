@@ -1,16 +1,43 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Search, BookOpenText, Trash2, Copy, Play } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
+import {
+  Plus,
+  Search,
+  BookOpenText,
+  Trash2,
+  Copy,
+  Play,
+  FileText,
+  LayoutTemplate,
+  ChevronDown,
+  Loader2,
+} from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { createClient } from "@/lib/supabase/client";
 import { cn, formatRelativeDate } from "@/lib/utils";
-import { minutesFromWords, formatDuration } from "@/lib/discursos/outline-utils";
+import {
+  minutesFromWords,
+  formatDuration,
+  computeWordCount,
+} from "@/lib/discursos/outline-utils";
+import {
+  OUTLINE_TEMPLATES,
+  cloneTemplateDoc,
+  type OutlineTemplate,
+} from "@/lib/discursos/templates";
 import { DeleteOutlineDialog } from "@/components/discursos/delete-outline-dialog";
 import { toast } from "sonner";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -37,6 +64,54 @@ export function DiscursosClient({ userId }: { userId: string }) {
   // Modal de exclusão
   const [outlineToDelete, setOutlineToDelete] = useState<OutlineItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Menu "Novo" e modal de modelos
+  const [newMenuOpen, setNewMenuOpen] = useState(false);
+  const [templatesDialogOpen, setTemplatesDialogOpen] = useState(false);
+  const [creatingFromTemplateId, setCreatingFromTemplateId] = useState<string | null>(null);
+  const newMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!newMenuOpen) return;
+    function handleOutsideClick(e: MouseEvent) {
+      if (newMenuRef.current && !newMenuRef.current.contains(e.target as Node)) {
+        setNewMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [newMenuOpen]);
+
+  const handleCreateFromTemplate = async (template: OutlineTemplate) => {
+    if (creatingFromTemplateId) return;
+    setCreatingFromTemplateId(template.id);
+
+    const content = cloneTemplateDoc(template);
+    const wordCount = computeWordCount(content);
+
+    const { data, error } = await supabase
+      .from("outlines")
+      .insert({
+        user_id: userId,
+        title: template.title,
+        category: template.category,
+        content,
+        word_count: wordCount,
+      })
+      .select("id")
+      .single();
+
+    setCreatingFromTemplateId(null);
+
+    if (error || !data) {
+      console.error("Erro ao criar esboço a partir de modelo:", error);
+      toast.error("Erro ao criar esboço a partir do modelo.");
+      return;
+    }
+
+    setTemplatesDialogOpen(false);
+    router.push(`/discursos/${data.id}`);
+  };
 
   useEffect(() => {
     let ignore = false;
@@ -137,15 +212,62 @@ export function DiscursosClient({ userId }: { userId: string }) {
               <Search size={14} className="mr-1" /> Bíblia
             </Link>
 
-            <Link
-              href="/discursos/novo"
-              className={cn(
-                buttonVariants({ variant: "primary", size: "sm" }),
-                "h-9 px-4 text-sm rounded-full shrink-0"
+            <div ref={newMenuRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setNewMenuOpen((o) => !o)}
+                aria-expanded={newMenuOpen}
+                aria-haspopup="menu"
+                className={cn(
+                  buttonVariants({ variant: "primary", size: "sm" }),
+                  "h-9 px-3.5 text-sm rounded-full shrink-0 gap-1 cursor-pointer"
+                )}
+              >
+                <Plus size={16} className="-ml-0.5" />
+                <span>Novo</span>
+                <ChevronDown size={14} className="opacity-80" />
+              </button>
+
+              {newMenuOpen && (
+                <div
+                  role="menu"
+                  className="absolute right-0 mt-1.5 w-56 rounded-xl bg-[var(--surface)] border border-[var(--border)] shadow-lg py-1.5 z-40"
+                >
+                  <Link
+                    role="menuitem"
+                    href="/discursos/novo"
+                    onClick={() => setNewMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-[var(--ink)] hover:bg-[var(--panel)] transition-colors"
+                  >
+                    <FileText size={16} className="text-[var(--primary)] shrink-0" />
+                    <div className="flex flex-col min-w-0">
+                      <span className="font-medium leading-tight">Em branco</span>
+                      <span className="text-[11px] text-[var(--ink-muted)]">
+                        Começar um esboço do zero
+                      </span>
+                    </div>
+                  </Link>
+
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setNewMenuOpen(false);
+                      setTemplatesDialogOpen(true);
+                    }}
+                    className="w-full text-left flex items-center gap-2.5 px-3.5 py-2.5 text-sm text-[var(--ink)] hover:bg-[var(--panel)] transition-colors cursor-pointer"
+                  >
+                    <LayoutTemplate size={16} className="text-[var(--accent)] shrink-0" />
+                    <div className="flex flex-col min-w-0">
+                      <span className="font-medium leading-tight">A partir de um modelo</span>
+                      <span className="text-[11px] text-[var(--ink-muted)]">
+                        Presidente da reunião, etc.
+                      </span>
+                    </div>
+                  </button>
+                </div>
               )}
-            >
-              <Plus size={16} className="-ml-1 mr-1" /> Novo
-            </Link>
+            </div>
           </div>
         }
       />
@@ -186,12 +308,21 @@ export function DiscursosClient({ userId }: { userId: string }) {
                 : "Você ainda não preparou nenhum esboço. Crie o seu primeiro agora mesmo."}
             </p>
             {!search && (
-              <Link
-                href="/discursos/novo"
-                className={buttonVariants({ variant: "secondary" })}
-              >
-                Criar meu primeiro esboço
-              </Link>
+              <div className="flex flex-wrap items-center justify-center gap-2.5">
+                <Link
+                  href="/discursos/novo"
+                  className={buttonVariants({ variant: "secondary" })}
+                >
+                  Em branco
+                </Link>
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={() => setTemplatesDialogOpen(true)}
+                >
+                  A partir de um modelo
+                </Button>
+              </div>
             )}
           </div>
         ) : (
@@ -273,6 +404,53 @@ export function DiscursosClient({ userId }: { userId: string }) {
           </div>
         )}
       </div>
+
+      {/* Diálogo de escolha de modelo */}
+      <Dialog open={templatesDialogOpen} onOpenChange={setTemplatesDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Novo a partir de um modelo</DialogTitle>
+            <DialogDescription>
+              Escolha um modelo pronto para criar uma cópia editável nos seus esboços.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-3 mt-2">
+            {OUTLINE_TEMPLATES.map((tpl) => {
+              const isCreating = creatingFromTemplateId === tpl.id;
+              return (
+                <button
+                  key={tpl.id}
+                  type="button"
+                  disabled={Boolean(creatingFromTemplateId)}
+                  onClick={() => handleCreateFromTemplate(tpl)}
+                  className="text-left w-full rounded-xl border border-[var(--border)] bg-[var(--background)] hover:border-[var(--primary)]/50 hover:bg-[var(--panel)]/60 p-4 transition-all flex items-start justify-between gap-3 cursor-pointer disabled:opacity-60"
+                >
+                  <div className="flex flex-col gap-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-display font-semibold text-base text-[var(--ink)]">
+                        {tpl.name}
+                      </span>
+                      <Badge variant="accent">{tpl.category}</Badge>
+                    </div>
+                    <p className="text-xs text-[var(--ink-muted)] leading-relaxed">
+                      {tpl.description}
+                    </p>
+                  </div>
+
+                  <div className="shrink-0 mt-1 text-[var(--primary)]">
+                    {isCreating ? (
+                      <Loader2 size={18} className="animate-spin" />
+                    ) : (
+                      <Plus size={18} />
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Diálogo de confirmação de exclusão */}
       <DeleteOutlineDialog

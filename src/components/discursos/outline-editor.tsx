@@ -4,6 +4,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import Underline from "@tiptap/extension-underline";
+import { TaskList, TaskItem } from "@tiptap/extension-list";
 import { BibleVerse } from "./bible-verse-node";
 import { VerseSuggestion } from "./verse-suggestion-extension";
 import { BackstageMark } from "./backstage-mark";
@@ -13,6 +14,8 @@ import {
   Underline as UnderlineIcon,
   List,
   ListOrdered,
+  ListChecks,
+  RotateCcw,
   Heading1,
   Heading2,
   EyeOff,
@@ -32,6 +35,10 @@ export function OutlineEditor({ initialContent, onChange }: OutlineEditorProps) 
         heading: { levels: [1, 2, 3] },
       }),
       Underline,
+      TaskList,
+      TaskItem.configure({
+        nested: false,
+      }),
       Placeholder.configure({
         placeholder:
           "Comece a escrever seu esboço aqui... (digite / para inserir um versículo)",
@@ -59,9 +66,28 @@ export function OutlineEditor({ initialContent, onChange }: OutlineEditorProps) 
   const toggleUnderline = () => editor.chain().focus().toggleUnderline().run();
   const toggleBulletList = () => editor.chain().focus().toggleBulletList().run();
   const toggleOrderedList = () => editor.chain().focus().toggleOrderedList().run();
+  const toggleTaskList = () => editor.chain().focus().toggleTaskList().run();
   const toggleH1 = () => editor.chain().focus().toggleHeading({ level: 1 }).run();
   const toggleH2 = () => editor.chain().focus().toggleHeading({ level: 2 }).run();
   const toggleBackstage = () => editor.chain().focus().toggleMark("backstage").run();
+
+  const uncheckAllTasks = () => {
+    editor
+      .chain()
+      .focus()
+      .command(({ tr, dispatch }) => {
+        let changed = false;
+        tr.doc.descendants((node, pos) => {
+          if (node.type.name === "taskItem" && node.attrs.checked) {
+            tr.setNodeMarkup(pos, undefined, { ...node.attrs, checked: false });
+            changed = true;
+          }
+        });
+        if (changed && dispatch) dispatch(tr);
+        return changed;
+      })
+      .run();
+  };
 
   // Simula a digitação de "/" no cursor para disparar a sugestão flutuante
   const triggerVersePopup = () => {
@@ -115,6 +141,23 @@ export function OutlineEditor({ initialContent, onChange }: OutlineEditorProps) 
           icon={<ListOrdered size={18} />}
           label="Lista numerada"
         />
+        <ToolbarButton
+          onClick={toggleTaskList}
+          active={editor.isActive("taskList")}
+          icon={<ListChecks size={18} />}
+          label="Lista de tarefas"
+        />
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={uncheckAllTasks}
+          title="Desmarcar todas as tarefas do esboço"
+          className="text-xs h-8 px-2 text-[var(--ink-muted)] hover:text-[var(--ink)] shrink-0 gap-1"
+        >
+          <RotateCcw size={13} />
+          <span>Desmarcar tudo</span>
+        </Button>
         <div className="w-px h-6 bg-[var(--border)] mx-1 shrink-0" />
 
         {/* Nota de Bastidor */}

@@ -5,6 +5,7 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
+import { TaskList, TaskItem } from "@tiptap/extension-list";
 import {
   ArrowLeft,
   Maximize,
@@ -13,6 +14,7 @@ import {
   Plus,
   LayoutList,
   Layers,
+  RotateCcw,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -23,7 +25,13 @@ import { CardMode } from "./discourse-card-mode";
 import { BackstageMark } from "./backstage-mark";
 import { EditorProvider } from "./editor-context";
 import { Button } from "@/components/ui/button";
-import { estimateDuration, formatDuration, splitByHeadings } from "@/lib/discursos/outline-utils";
+import {
+  estimateDuration,
+  formatDuration,
+  splitByHeadings,
+  uncheckAllTaskItems,
+  hasTaskItems,
+} from "@/lib/discursos/outline-utils";
 import type { JSONContent } from "@tiptap/core";
 
 interface OutlineDiscourseProps {
@@ -48,6 +56,7 @@ export function OutlineDiscourse({
   const fontSize = FONT_SIZES[fontIndex];
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [viewMode, setViewMode] = useState<"scroll" | "cards">("scroll");
+  const [resetSignal, setResetSignal] = useState(0);
 
   // Estimativa de duração
   const { minutes: estimatedMinutes } = useMemo(
@@ -55,15 +64,22 @@ export function OutlineDiscourse({
     [content]
   );
 
+  const hasTasks = useMemo(() => hasTaskItems(content), [content]);
+
   // Seções para Modo Cartões (divididas por H1/H2)
   const sections = useMemo(() => splitByHeadings(content), [content]);
 
-  // Editor somente para leitura no Modo Rolagem
+  // Editor somente para leitura no Modo Rolagem (marcações valem apenas nesta sessão)
   const editor = useEditor({
     editable: false,
     extensions: [
       StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
       Underline,
+      TaskList,
+      TaskItem.configure({
+        nested: false,
+        onReadOnlyChecked: () => true,
+      }),
       Placeholder.configure({ placeholder: "" }),
       BibleVerse,
       BackstageMark,
@@ -75,6 +91,45 @@ export function OutlineDiscourse({
       },
     },
   });
+
+  // Mantém o atributo `checked` atualizado no documento em memória da sessão no Modo Rolagem
+  useEffect(() => {
+    if (!editor) return;
+    const dom = editor.view.dom;
+    const handleChange = (e: Event) => {
+      const target = e.target as HTMLElement | null;
+      if (target instanceof HTMLInputElement && target.type === "checkbox") {
+        try {
+          const pos = editor.view.posAtDOM(target, 0);
+          const $pos = editor.state.doc.resolve(pos);
+          for (let d = $pos.depth; d > 0; d--) {
+            const node = $pos.node(d);
+            if (node.type.name === "taskItem") {
+              const nodePos = $pos.before(d);
+              const tr = editor.state.tr.setNodeMarkup(nodePos, undefined, {
+                ...node.attrs,
+                checked: target.checked,
+              });
+              editor.view.dispatch(tr);
+              break;
+            }
+          }
+        } catch {
+          // Ignora caso não encontre a posição
+        }
+      }
+    };
+    dom.addEventListener("change", handleChange);
+    return () => dom.removeEventListener("change", handleChange);
+  }, [editor]);
+
+  const clearSessionMarks = () => {
+    if (editor) {
+      const unchecked = uncheckAllTaskItems(editor.getJSON());
+      editor.commands.setContent(unchecked, { emitUpdate: false });
+    }
+    setResetSignal((s) => s + 1);
+  };
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -180,8 +235,26 @@ export function OutlineDiscourse({
             )}
           </div>
 
-          {/* Direita: Timer + Modo (Rolagem / Cartões) + Seletor de Fonte + Tela Cheia */}
+          {/* Direita: Timer + Limpar marcações + Modo (Rolagem / Cartões) + Seletor de Fonte + Tela Cheia */}
           <div className="discourse-header-actions flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {hasTasks && (
+              <>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearSessionMarks}
+                  title="Limpar marcações de tarefas desta apresentação"
+                  aria-label="Limpar marcações"
+                  className="h-8 px-2.5 text-xs text-[var(--ink-muted)] hover:text-[var(--ink)] hover:bg-[var(--background)] rounded-full gap-1.5 shrink-0"
+                >
+                  <RotateCcw size={13} />
+                  <span className="hidden md:inline">Limpar marcações</span>
+                </Button>
+                <div className="w-px h-5 bg-[var(--border)] mx-0.5 sm:mx-1" aria-hidden />
+              </>
+            )}
+
             {/* Timer com estimativa pré-preenchida */}
             <DiscourseTimer estimatedMinutes={estimatedMinutes > 0 ? estimatedMinutes : undefined} />
 
@@ -291,6 +364,7 @@ export function OutlineDiscourse({
               <CardMode
                 sections={sections}
                 fontSize={fontSize}
+                resetSignal={resetSignal}
               />
             )}
           </section>

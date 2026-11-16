@@ -181,6 +181,21 @@ function Blocks({ blocks, texts }: { blocks: ExportBlock[]; texts: VerseTextMap 
                 ))}
               </View>
             );
+          case "taskList":
+            return (
+              <View key={idx} style={{ marginBottom: 6 }}>
+                {b.items.map((item, n) => (
+                  <View key={n} style={styles.listItem}>
+                    <Text style={styles.marker}>
+                      {item.checked ? "☑" : "☐"}
+                    </Text>
+                    <View style={styles.listBody}>
+                      <Blocks blocks={item.blocks} texts={texts} />
+                    </View>
+                  </View>
+                ))}
+              </View>
+            );
           case "blockquote":
             return (
               <View key={idx} style={styles.quote}>
