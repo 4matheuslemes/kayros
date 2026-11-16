@@ -254,7 +254,7 @@ export function DashboardClient({
               className={cn(
                 "grid gap-5 items-stretch",
                 desktopModuleCount >= 3
-                  ? "grid-cols-3"
+                  ? "grid-cols-2 xl:grid-cols-3"
                   : desktopModuleCount === 2
                     ? "grid-cols-2"
                     : "grid-cols-1"

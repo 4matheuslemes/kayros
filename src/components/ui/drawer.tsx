@@ -63,8 +63,8 @@ export function Drawer({ open, onClose, title, description, children, className 
       {/* Sheet */}
       <div
         className={cn(
-          "relative z-10 bg-[var(--surface)] border-t border-[var(--border)]",
-          "rounded-t-lg px-5 pt-4 pb-8 max-h-[90dvh] overflow-y-auto",
+          "relative z-10 w-full max-w-2xl mx-auto bg-[var(--surface)] border-t sm:border-x border-[var(--border)]",
+          "rounded-t-lg sm:rounded-t-2xl px-5 pt-4 pb-8 max-h-[90dvh] overflow-y-auto",
           "animate-[slide-up_0.25s_cubic-bezier(0.32,0.72,0,1)]",
           className
         )}

@@ -267,7 +267,7 @@ export function NavMenu({ fullName }: NavMenuProps = {}) {
             aria-modal="true"
             aria-label="Menu principal"
             className={cn(
-              "relative z-10 w-[min(92vw,360px)] rounded-[28px] bg-[var(--surface)] p-6",
+              "relative z-10 w-[min(92vw,360px)] max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-[28px] bg-[var(--surface)] p-6",
               "border border-[var(--border)] shadow-[var(--shadow-card)]",
               "flex flex-col transition-all duration-200 ease-out",
               isExpanded && !isClosing

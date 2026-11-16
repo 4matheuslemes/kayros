@@ -188,6 +188,8 @@ body {
   flex-direction: column;
   min-height: 100dvh;
   padding-bottom: var(--bottom-nav-h);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 @media (min-width: 1024px) {
@@ -480,17 +482,27 @@ body {
 }
 
 .verse-panel-column--open {
-  width: 360px;
+  width: 310px;
   border-left: 1px solid var(--border);
 }
 
 .verse-panel-inner {
-  width: 360px;
+  width: 310px;
   display: flex;
   flex-direction: column;
   background: var(--surface);
   height: 100%;
   overflow: hidden;
+}
+
+@media (min-width: 1280px) {
+  .verse-panel-column--open {
+    width: 360px;
+  }
+
+  .verse-panel-inner {
+    width: 360px;
+  }
 }
 
 .outline-page .verse-panel-inner {

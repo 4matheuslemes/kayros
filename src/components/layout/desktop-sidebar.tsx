@@ -107,7 +107,7 @@ export function DesktopSidebar({ permissions: propPermissions }: DesktopSidebarP
     <aside
       className={cn(
         "hidden lg:flex lg:flex-col lg:w-[248px] lg:shrink-0 lg:fixed lg:inset-y-0 lg:left-0 lg:z-30",
-        "bg-[var(--surface)] border-r border-[var(--border)] px-4 py-6 justify-between select-none"
+        "bg-[var(--surface)] border-r border-[var(--border)] px-4 py-6 justify-between gap-6 overflow-y-auto overscroll-contain select-none"
       )}
       aria-label="Navegação lateral desktop"
     >
@@ -335,7 +335,7 @@ export function DesktopSidebar({ permissions: propPermissions }: DesktopSidebarP
       </div>
 
       {/* ── 3. RODAPÉ DA SIDEBAR: SYNC, TEMA E PERFIL ── */}
-      <div className="pt-4 border-t border-[var(--border)] flex flex-col gap-3">
+      <div className="pt-4 border-t border-[var(--border)] flex flex-col gap-3 shrink-0">
         {/* Linha 1: Status de Sync + Alternância Compacta de Tema */}
         <div className="flex items-center justify-between px-1">
           <SyncStatusIndicator />
