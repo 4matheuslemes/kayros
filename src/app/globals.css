@@ -545,10 +545,67 @@ body {
   }
 }
 
+.outline-page .editor-with-panel {
+  gap: 0;
+}
+
+.outline-page .verse-panel-column,
+.outline-page .verse-panel-column--open {
+  width: 0;
+  overflow: visible;
+  border-left: none;
+}
+
 .outline-page .verse-panel-inner {
-  position: sticky;
+  position: fixed;
   top: 0;
+  right: 0;
+  bottom: 0;
   height: 100dvh;
+  width: min(88vw, 340px);
+  z-index: 50;
+  border-left: 1px solid var(--border);
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.10);
+  transform: translateX(100%);
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    transform 0.25s cubic-bezier(0.32, 0.72, 0, 1),
+    visibility 0.25s;
+}
+
+[data-theme="dark"] .outline-page .verse-panel-inner {
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.40);
+}
+
+.outline-page .verse-panel-column--open .verse-panel-inner {
+  transform: translateX(0);
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.app-shell > main {
+  transition: padding-right 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@media (min-width: 600px) {
+  .outline-page .verse-panel-inner {
+    width: 320px;
+  }
+
+  .app-shell:has(.outline-page .verse-panel-column--open) > main {
+    padding-right: 320px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .outline-page .verse-panel-inner {
+    width: 380px;
+  }
+
+  .app-shell:has(.outline-page .verse-panel-column--open) > main {
+    padding-right: 380px;
+  }
 }
 
 .verse-panel-header {
@@ -567,12 +624,12 @@ body {
 }
 
 @media (max-width: 599px) {
-  .verse-panel-column--open {
+  .discourse-page .verse-panel-column--open {
     width: calc(100vw - 3rem);
     min-width: 0;
   }
 
-  .verse-panel-inner {
+  .discourse-page .verse-panel-inner {
     width: calc(100vw - 3rem);
   }
 }

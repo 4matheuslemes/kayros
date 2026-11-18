@@ -78,7 +78,7 @@ export function AppShellClient({
 
           <main
             className={cn(
-              "flex-1 overflow-y-auto",
+              "flex-1 min-w-0",
               !isPresentation && pathname !== "/onboarding" && "lg:pl-[248px]"
             )}
           >
