@@ -330,7 +330,7 @@ export function EditorClient({ id }: EditorClientProps) {
             <OutlineEditor initialContent={content} onChange={setContent} />
           </div>
 
-          <VersePanel />
+          <VersePanel editable={true} />
         </div>
 
         {/* Histórico de apresentações (somente para esboços existentes) */}

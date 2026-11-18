@@ -99,6 +99,16 @@ function inlinesOf(node: any, opts: BuildOptions): ExportInline[] {
       return;
     }
 
+    if (n.type === "panelBlock") {
+      const label = n.attrs?.label || "Bloco";
+      const opt = n.attrs?.optional ? " (se houver tempo)" : "";
+      out.push({
+        text: `[${label}${opt}]`,
+        bold: true,
+      });
+      return;
+    }
+
     if (n.type === "hardBreak") {
       out.push({ text: "\n" });
       return;
@@ -130,6 +140,23 @@ function plainOf(node: any): string {
   return "";
 }
 
+function panelBlockBodiesOf(node: any): string[] {
+  const bodies: string[] = [];
+  const walk = (n: any) => {
+    if (!n || typeof n !== "object") return;
+    if (n.type === "panelBlock") {
+      const b = typeof n.attrs?.body === "string" ? n.attrs.body.trim() : "";
+      if (b) bodies.push(b);
+      return;
+    }
+    if (Array.isArray(n.content)) {
+      n.content.forEach(walk);
+    }
+  };
+  walk(node);
+  return bodies;
+}
+
 export function buildBlocks(nodes: any[] | undefined, opts: BuildOptions): ExportBlock[] {
   const blocks: ExportBlock[] = [];
 
@@ -139,20 +166,50 @@ export function buildBlocks(nodes: any[] | undefined, opts: BuildOptions): Expor
     switch (node.type) {
       case "heading": {
         const inlines = inlinesOf(node, opts);
-        if (inlines.length === 0) break;
-        blocks.push({
-          type: "heading",
-          level: node.attrs?.level ?? 2,
-          inlines,
-          verses: versesOf(inlines),
-        });
+        if (inlines.length > 0) {
+          blocks.push({
+            type: "heading",
+            level: node.attrs?.level ?? 2,
+            inlines,
+            verses: versesOf(inlines),
+          });
+        }
+        for (const body of panelBlockBodiesOf(node)) {
+          blocks.push({
+            type: "paragraph",
+            inlines: [{ text: body, italic: true }],
+            verses: [],
+          });
+        }
         break;
       }
       case "paragraph": {
         const inlines = inlinesOf(node, opts);
         // Parágrafo vazio ou só com bastidor omitido: ignora
-        if (inlines.length === 0 || inlines.every((i) => !i.text.trim())) break;
-        blocks.push({ type: "paragraph", inlines, verses: versesOf(inlines) });
+        if (inlines.length > 0 && !inlines.every((i) => !i.text.trim())) {
+          blocks.push({ type: "paragraph", inlines, verses: versesOf(inlines) });
+        }
+        for (const body of panelBlockBodiesOf(node)) {
+          blocks.push({
+            type: "paragraph",
+            inlines: [{ text: body, italic: true }],
+            verses: [],
+          });
+        }
+        break;
+      }
+      case "panelBlock": {
+        const inlines = inlinesOf(node, opts);
+        if (inlines.length > 0) {
+          blocks.push({ type: "paragraph", inlines, verses: [] });
+        }
+        for (const body of panelBlockBodiesOf(node)) {
+          blocks.push({
+            type: "paragraph",
+            inlines: [{ text: body, italic: true }],
+            verses: [],
+          });
+        }
         break;
       }
       case "bulletList":

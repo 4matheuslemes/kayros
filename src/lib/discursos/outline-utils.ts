@@ -30,6 +30,13 @@ export function extractPlainText(doc: JSONContent | null | undefined): string {
     return ` ${doc.attrs.text} `;
   }
 
+  // Nó panel-block: inclui rótulo e corpo no texto puro
+  if (doc.type === "panelBlock") {
+    const label = doc.attrs?.label ?? "";
+    const body = doc.attrs?.body ?? "";
+    return ` ${label} ${body} `;
+  }
+
   // Nós com filhos
   if (Array.isArray(doc.content)) {
     return doc.content.map(extractPlainText).join(" ");

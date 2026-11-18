@@ -5,10 +5,11 @@ import { BookOpen } from "lucide-react";
 import { useEditorContext } from "./editor-context";
 
 export function BibleVerseComponent(props: NodeViewProps) {
-  const { openVersePanel } = useEditorContext();
+  const { togglePanel } = useEditorContext();
 
   const handleOpen = () => {
-    openVersePanel({
+    togglePanel({
+      kind: "verse",
       book: props.node.attrs.book,
       chapter: props.node.attrs.chapter,
       verse: props.node.attrs.verse,

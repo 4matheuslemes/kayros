@@ -1,11 +1,15 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import Underline from "@tiptap/extension-underline";
 import { TaskList, TaskItem } from "@tiptap/extension-list";
 import { BibleVerse } from "./bible-verse-node";
+import { PanelBlock } from "./panel-block-node";
+import { InsertPanelBlockDialog } from "./insert-panel-block-dialog";
+import { useEditorContext } from "./editor-context";
 import { VerseSuggestion } from "./verse-suggestion-extension";
 import { BackstageMark } from "./backstage-mark";
 import {
@@ -19,6 +23,7 @@ import {
   Heading1,
   Heading2,
   EyeOff,
+  PanelRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { JSONContent } from "@tiptap/core";
@@ -29,6 +34,9 @@ interface OutlineEditorProps {
 }
 
 export function OutlineEditor({ initialContent, onChange }: OutlineEditorProps) {
+  const { setEditor, openPanel } = useEditorContext();
+  const [isBlockDialogOpen, setIsBlockDialogOpen] = useState(false);
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -44,6 +52,7 @@ export function OutlineEditor({ initialContent, onChange }: OutlineEditorProps) 
           "Comece a escrever seu esboço aqui... (digite / para inserir um versículo)",
       }),
       BibleVerse,
+      PanelBlock,
       VerseSuggestion,
       BackstageMark,
     ],
@@ -58,6 +67,11 @@ export function OutlineEditor({ initialContent, onChange }: OutlineEditorProps) 
       onChange(editor.getJSON());
     },
   });
+
+  useEffect(() => {
+    setEditor(editor);
+    return () => setEditor(null);
+  }, [editor, setEditor]);
 
   if (!editor) return null;
 
@@ -92,6 +106,38 @@ export function OutlineEditor({ initialContent, onChange }: OutlineEditorProps) 
   // Simula a digitação de "/" no cursor para disparar a sugestão flutuante
   const triggerVersePopup = () => {
     editor.chain().focus().insertContent("/").run();
+  };
+
+  const handleInsertBlock = ({
+    label,
+    optional,
+  }: {
+    label: string;
+    optional: boolean;
+  }) => {
+    const blockId =
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : Math.random().toString(36).slice(2);
+
+    editor
+      .chain()
+      .focus()
+      .insertPanelBlock({
+        blockId,
+        label,
+        body: "",
+        optional,
+      })
+      .run();
+
+    openPanel({
+      kind: "block",
+      blockId,
+      label,
+      body: "",
+      optional,
+    });
   };
 
   return (
@@ -179,9 +225,26 @@ export function OutlineEditor({ initialContent, onChange }: OutlineEditorProps) 
         >
           + Versículo (/)
         </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          onClick={() => setIsBlockDialogOpen(true)}
+          className="text-xs h-8 text-[var(--accent)] border-[var(--accent)]/30 hover:bg-[var(--accent)]/10 shrink-0 gap-1"
+          title="Inserir bloco no painel lateral"
+        >
+          <PanelRight size={13} />
+          <span>+ Bloco no painel</span>
+        </Button>
       </div>
 
       <EditorContent editor={editor} className="w-full min-w-0" />
+
+      <InsertPanelBlockDialog
+        open={isBlockDialogOpen}
+        onOpenChange={setIsBlockDialogOpen}
+        onConfirm={handleInsertBlock}
+      />
     </div>
   );
 }

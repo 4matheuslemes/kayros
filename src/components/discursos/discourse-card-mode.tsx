@@ -8,6 +8,7 @@ import { TaskList, TaskItem } from "@tiptap/extension-list";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BibleVerse } from "./bible-verse-node";
+import { PanelBlock } from "./panel-block-node";
 import { BackstageMark } from "./backstage-mark";
 import { uncheckAllTaskItems, type DocSection } from "@/lib/discursos/outline-utils";
 import { cn } from "@/lib/utils";
@@ -46,6 +47,7 @@ function CardSlide({
         onReadOnlyChecked: () => true,
       }),
       BibleVerse,
+      PanelBlock,
       BackstageMark,
     ],
     content: {

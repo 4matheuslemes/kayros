@@ -19,6 +19,7 @@ import {
 import { useRouter } from "next/navigation";
 
 import { BibleVerse } from "./bible-verse-node";
+import { PanelBlock } from "./panel-block-node";
 import { VersePanel } from "./verse-panel";
 import { DiscourseTimer } from "./discourse-timer";
 import { CardMode } from "./discourse-card-mode";
@@ -82,6 +83,7 @@ export function OutlineDiscourse({
       }),
       Placeholder.configure({ placeholder: "" }),
       BibleVerse,
+      PanelBlock,
       BackstageMark,
     ],
     content: content || { type: "doc", content: [] },
@@ -369,8 +371,8 @@ export function OutlineDiscourse({
             )}
           </section>
 
-          {/* Painel de estudo de versículo em split view */}
-          <VersePanel />
+          {/* Painel de estudo de versículo ou bloco em split view */}
+          <VersePanel editable={false} fontSize={fontSize} />
         </main>
       </div>
     </EditorProvider>
