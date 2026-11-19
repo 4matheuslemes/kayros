@@ -119,6 +119,30 @@ export function uncheckAllTaskItems(doc: JSONContent | null | undefined): JSONCo
 }
 
 /**
+ * Retorna um novo documento Tiptap sem marcas de link (`link`), preservando o texto.
+ * O módulo de Discursos não tem UI de links; marcas de link vindas de colagens/autolink
+ * faziam o clique abrir sites externos.
+ */
+export function stripLinkMarks(doc: JSONContent | null | undefined): JSONContent {
+  if (!doc || typeof doc !== "object") return { type: "doc", content: [] };
+
+  const walk = (node: JSONContent): JSONContent => {
+    const next: JSONContent = { ...node };
+    if (Array.isArray(node.marks)) {
+      const marks = node.marks.filter((m) => m.type !== "link");
+      if (marks.length > 0) next.marks = marks;
+      else delete next.marks;
+    }
+    if (Array.isArray(node.content)) {
+      next.content = node.content.map(walk);
+    }
+    return next;
+  };
+
+  return walk(doc);
+}
+
+/**
  * Verifica se o documento possui algum `taskItem`.
  */
 export function hasTaskItems(doc: JSONContent | null | undefined): boolean {

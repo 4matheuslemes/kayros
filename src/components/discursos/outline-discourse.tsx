@@ -32,6 +32,7 @@ import {
   splitByHeadings,
   uncheckAllTaskItems,
   hasTaskItems,
+  stripLinkMarks,
 } from "@/lib/discursos/outline-utils";
 import type { JSONContent } from "@tiptap/core";
 
@@ -49,9 +50,12 @@ export function OutlineDiscourse({
   id: _id,
   title,
   category,
-  content,
+  content: rawContent,
 }: OutlineDiscourseProps) {
   const router = useRouter();
+
+  // Remove marcas de link legadas (clique nunca deve abrir sites externos)
+  const content = useMemo(() => stripLinkMarks(rawContent), [rawContent]);
 
   const [fontIndex, setFontIndex] = useState<FontSizeIndex>(1); // 20px default
   const fontSize = FONT_SIZES[fontIndex];

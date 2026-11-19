@@ -41,6 +41,12 @@ export function OutlineEditor({ initialContent, onChange }: OutlineEditorProps) 
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
+        // Sem UI de links: nada de autolink/colagem e o clique nunca abre sites
+        link: {
+          openOnClick: false,
+          autolink: false,
+          linkOnPaste: false,
+        },
       }),
       Underline,
       TaskList,
@@ -62,6 +68,8 @@ export function OutlineEditor({ initialContent, onChange }: OutlineEditorProps) 
         class:
           "tiptap-editor focus:outline-none w-full min-w-0 min-h-[60vh] py-4",
       },
+      // Ao colar HTML de páginas web, mantém o texto e descarta os links
+      transformPastedHTML: (html) => html.replace(/<\/?a\b[^>]*>/gi, ""),
     },
     onUpdate: ({ editor }) => {
       onChange(editor.getJSON());

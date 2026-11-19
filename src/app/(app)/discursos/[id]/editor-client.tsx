@@ -19,6 +19,7 @@ import {
   estimateDuration,
   formatDuration,
   computeWordCount,
+  stripLinkMarks,
 } from "@/lib/discursos/outline-utils";
 import { useDebounce } from "@/hooks/use-debounce";
 import { toast } from "sonner";
@@ -96,7 +97,7 @@ export function EditorClient({ id }: EditorClientProps) {
 
       setTitle(data.title ?? "");
       setCategory(data.category || OUTLINE_CATEGORIES[0]);
-      setContent(data.content || { type: "doc", content: [] });
+      setContent(stripLinkMarks(data.content || { type: "doc", content: [] }));
       setLoading(false);
 
       // Libera o autosave somente após o conteúdo original do banco ter carregado
