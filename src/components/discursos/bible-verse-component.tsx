@@ -1,5 +1,6 @@
 "use client";
 
+import type { MouseEvent } from "react";
 import { NodeViewWrapper, NodeViewProps } from "@tiptap/react";
 import { BookOpen } from "lucide-react";
 import { useEditorContext } from "./editor-context";
@@ -7,7 +8,9 @@ import { useEditorContext } from "./editor-context";
 export function BibleVerseComponent(props: NodeViewProps) {
   const { togglePanel } = useEditorContext();
 
-  const handleOpen = () => {
+  const handleOpen = (e: MouseEvent<HTMLSpanElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
     togglePanel({
       kind: "verse",
       book: props.node.attrs.book,

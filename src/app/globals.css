@@ -512,100 +512,29 @@ body {
   min-width: 0;
 }
 
-/* Coluna e Conteúdo do Painel de Versículo */
+/* ─────────────────────────────────────────────────────────────
+   Painel Adaptativo (VersePanel)
+   • < 1024px  → Bottom Sheet largo (editor e apresentação)
+   • >= 1024px → Painel lateral proporcional
+   Sem Portal e sem backdrop: o texto atrás continua clicável, então dá
+   para ir de um versículo/bloco para outro sem fechar o painel.
+───────────────────────────────────────────────────────────── */
+
+/* Base compartilhada */
 .verse-panel-column {
-  width: 0;
-  overflow: hidden;
+  --vp-sheet-max: 52dvh;
   flex-shrink: 0;
-  transition: width 0.25s cubic-bezier(0.32, 0.72, 0, 1);
-  align-self: stretch;
 }
 
-.verse-panel-column--open {
-  width: 310px;
-  border-left: 1px solid var(--border);
+.verse-panel-column--expanded {
+  --vp-sheet-max: 80dvh;
 }
 
 .verse-panel-inner {
-  width: 310px;
   display: flex;
   flex-direction: column;
   background: var(--surface);
-  height: 100%;
   overflow: hidden;
-}
-
-@media (min-width: 1280px) {
-  .verse-panel-column--open {
-    width: 360px;
-  }
-
-  .verse-panel-inner {
-    width: 360px;
-  }
-}
-
-.outline-page .editor-with-panel {
-  gap: 0;
-}
-
-.outline-page .verse-panel-column,
-.outline-page .verse-panel-column--open {
-  width: 0;
-  overflow: visible;
-  border-left: none;
-}
-
-.outline-page .verse-panel-inner {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  height: 100dvh;
-  width: min(88vw, 340px);
-  z-index: 50;
-  border-left: 1px solid var(--border);
-  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.10);
-  transform: translateX(100%);
-  visibility: hidden;
-  pointer-events: none;
-  transition:
-    transform 0.25s cubic-bezier(0.32, 0.72, 0, 1),
-    visibility 0.25s;
-}
-
-[data-theme="dark"] .outline-page .verse-panel-inner {
-  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.40);
-}
-
-.outline-page .verse-panel-column--open .verse-panel-inner {
-  transform: translateX(0);
-  visibility: visible;
-  pointer-events: auto;
-}
-
-.app-shell > main {
-  transition: padding-right 0.25s cubic-bezier(0.32, 0.72, 0, 1);
-}
-
-@media (min-width: 600px) {
-  .outline-page .verse-panel-inner {
-    width: 320px;
-  }
-
-  .app-shell:has(.outline-page .verse-panel-column--open) > main {
-    padding-right: 320px;
-  }
-}
-
-@media (min-width: 1280px) {
-  .outline-page .verse-panel-inner {
-    width: 380px;
-  }
-
-  .app-shell:has(.outline-page .verse-panel-column--open) > main {
-    padding-right: 380px;
-  }
 }
 
 .verse-panel-header {
@@ -618,19 +547,173 @@ body {
 }
 
 .verse-panel-body {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   padding: 1.25rem;
 }
 
-@media (max-width: 599px) {
+.outline-page .editor-with-panel {
+  gap: 0;
+}
+
+/* ── A) Mobile e tablet em retrato (< 1024px): Bottom Sheet ── */
+@media (max-width: 1023.98px) {
+  .outline-page .verse-panel-column,
+  .discourse-page .verse-panel-column {
+    position: fixed;
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-height: var(--vp-sheet-max);
+    z-index: 50;
+    overflow: hidden;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -10px 32px rgba(0, 0, 0, 0.12);
+    transform: translateY(100%);
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      transform 0.28s cubic-bezier(0.32, 0.72, 0, 1),
+      max-height 0.25s ease,
+      visibility 0.28s;
+  }
+
+  [data-theme="dark"] .outline-page .verse-panel-column,
+  [data-theme="dark"] .discourse-page .verse-panel-column {
+    box-shadow: 0 -10px 32px rgba(0, 0, 0, 0.45);
+  }
+
+  .outline-page .verse-panel-column--open,
   .discourse-page .verse-panel-column--open {
-    width: calc(100vw - 3rem);
-    min-width: 0;
+    transform: translateY(0);
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .outline-page .verse-panel-inner,
+  .discourse-page .verse-panel-inner {
+    width: 100%;
+    max-height: var(--vp-sheet-max);
+  }
+
+  /* Largura de leitura confortável, centralizada em tablets */
+  .outline-page .verse-panel-header,
+  .discourse-page .verse-panel-header {
+    padding-inline: max(1.25rem, calc((100% - 680px) / 2 + 1.25rem));
+  }
+
+  .outline-page .verse-panel-body,
+  .discourse-page .verse-panel-body {
+    width: 100%;
+    max-width: 680px;
+    margin-inline: auto;
+    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
+  }
+
+  /*
+   * Espaço de rolagem: com o sheet aberto, o usuário precisa conseguir
+   * rolar até o fim do texto sem que o painel tape os últimos parágrafos.
+   */
+  .outline-page {
+    transition: padding-bottom 0.25s ease;
+  }
+
+  .outline-page:has(.verse-panel-column--open) {
+    padding-bottom: 52dvh;
+  }
+
+  .outline-page:has(.verse-panel-column--open.verse-panel-column--expanded) {
+    padding-bottom: 80dvh;
+  }
+
+  .discourse-page .discourse-content {
+    transition: padding-bottom 0.25s ease;
+  }
+
+  .discourse-page:has(.verse-panel-column--open) .discourse-content {
+    padding-bottom: 52dvh;
+  }
+
+  .discourse-page:has(.verse-panel-column--open.verse-panel-column--expanded)
+    .discourse-content {
+    padding-bottom: 80dvh;
+  }
+}
+
+/* ── B) Tablet em paisagem e desktop (>= 1024px): painel lateral ── */
+@media (min-width: 1024px) {
+  /* Modo Apresentação: split view em flexbox */
+  .discourse-page .verse-panel-column {
+    --vp-panel-w: clamp(400px, 44vw, 560px);
+    width: 0;
+    overflow: hidden;
+    align-self: stretch;
+    transition: width 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .discourse-page .verse-panel-column--open {
+    width: var(--vp-panel-w);
+    border-left: 1px solid var(--border);
   }
 
   .discourse-page .verse-panel-inner {
-    width: calc(100vw - 3rem);
+    width: var(--vp-panel-w);
+    height: 100%;
+  }
+
+  /* Modo Edição: painel fixo à direita (a coluna não ocupa espaço no fluxo) */
+  .outline-page .verse-panel-column {
+    --vp-panel-w: clamp(400px, 44vw, 480px);
+    width: 0;
+    overflow: visible;
+  }
+
+  .outline-page .verse-panel-inner {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: var(--vp-panel-w);
+    height: 100dvh;
+    z-index: 50;
+    border-left: 1px solid var(--border);
+    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.1);
+    transform: translateX(100%);
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      transform 0.25s cubic-bezier(0.32, 0.72, 0, 1),
+      visibility 0.25s;
+  }
+
+  [data-theme="dark"] .outline-page .verse-panel-inner {
+    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.4);
+  }
+
+  .outline-page .verse-panel-column--open .verse-panel-inner {
+    transform: translateX(0);
+    visibility: visible;
+    pointer-events: auto;
+  }
+}
+
+/* Telas largas: painel de 440px empurra o editor (sem esmagar tablets) */
+@media (min-width: 1400px) {
+  .outline-page .verse-panel-column {
+    --vp-panel-w: 440px;
+  }
+
+  .app-shell > main {
+    transition: padding-right 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .app-shell:has(.outline-page .verse-panel-column--open) > main {
+    padding-right: 440px;
   }
 }
 
